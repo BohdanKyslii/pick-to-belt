@@ -42,10 +42,12 @@ def report_page():
 
 @bp.route("/api/orders")
 def get_orders():
-    """Список замовлень зі статусом pending або picking."""
-    orders = Order.query.filter(
-        Order.status.in_(["pending", "picking"])
-    ).order_by(Order.created_at).all()
+    # Тільки одне активне замовлення (picking) або список pending
+    picking = Order.query.filter_by(status="picking").first()
+    if picking:
+        return jsonify([picking.to_dict()])
+    orders = Order.query.filter_by(status="pending")\
+        .order_by(Order.created_at).limit(5).all()
     return jsonify([o.to_dict() for o in orders])
 
 

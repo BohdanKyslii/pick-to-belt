@@ -1,0 +1,40 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="PyPackageRequirementsInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredPackages">
+        <list>
+          <option value="colorama" />
+          <option value="flake8" />
+          <option value="iniconfig" />
+          <option value="isort" />
+          <option value="mccabe" />
+          <option value="mypy" />
+          <option value="mypy_extensions" />
+          <option value="packaging" />
+          <option value="pathspec" />
+          <option value="pluggy" />
+          <option value="pycodestyle" />
+          <option value="pyflakes" />
+          <option value="Pygments" />
+          <option value="pytest" />
+          <option value="pytest-django" />
+          <option value="setuptools" />
+          <option value="typing_extensions" />
+          <option value="wheel" />
+          <option value="Django" />
+          <option value="pillow" />
+          <option value="asgiref" />
+          <option value="sqlparse" />
+          <option value="psycopg2-binary" />
+          <option value="black" />
+          <option value="flake8-django" />
+          <option value="flake8-import-order" />
+          <option value="validators" />
+          <option value="Faker" />
+          <option value="django-debug-toolbar" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>
