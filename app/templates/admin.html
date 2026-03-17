@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pick-to-Belt | Налаштування</title>
+<style>
+:root { --primary:#2563eb; --success:#16a34a; --danger:#dc2626;
+        --gray:#6b7280; --radius:12px; --shadow:0 2px 8px rgba(0,0,0,.12); }
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+       background:#f0f4f8; min-height:100vh; }
+.header { background:var(--primary);color:#fff;padding:12px 16px;
+          display:flex;align-items:center;justify-content:space-between;
+          position:sticky;top:0;z-index:100;box-shadow:var(--shadow); }
+.header h1 { font-size:18px;font-weight:700; }
+.header-links a { color:rgba(255,255,255,.85);text-decoration:none;
+                  font-size:13px;margin-left:12px; }
+.container { padding:16px; }
+.btn { padding:8px 16px;border-radius:8px;border:none;cursor:pointer;
+       font-size:14px;font-weight:600;transition:.15s; }
+.btn-primary { background:var(--primary);color:#fff; }
+.btn-success { background:var(--success);color:#fff; }
+.btn-danger  { background:var(--danger);color:#fff; }
+.btn-outline { background:#fff;color:var(--primary);border:1.5px solid var(--primary); }
+.btn-sm { padding:5px 10px;font-size:12px; }
+.actions-bar { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+               background:#fff;padding:12px;border-radius:var(--radius);
+               box-shadow:var(--shadow); }
+.section-title { font-size:16px;font-weight:700;margin-bottom:10px;color:#1f2937; }
+.grid-16 { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px; }
+.cell-card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+             padding:14px;border:2px solid transparent;transition:.2s;cursor:pointer; }
+.cell-card:hover { border-color:var(--primary); }
+.cell-card.empty { border-style:dashed;border-color:#d1d5db; }
+.cell-num { font-size:11px;color:var(--gray);margin-bottom:4px; }
+.cell-art  { font-size:14px;font-weight:700; }
+.cell-name { font-size:12px;color:var(--gray);margin-top:2px;
+             white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.cell-stock { display:flex;justify-content:space-between;align-items:center;
+              margin-top:8px; }
+.stock-bar { flex:1;height:6px;background:#e5e7eb;border-radius:3px;margin-right:8px;overflow:hidden; }
+.stock-fill { height:100%;border-radius:3px;background:var(--success);transition:.3s; }
+.stock-fill.low { background:#f59e0b; }
+.stock-fill.empty { background:var(--danger); }
+.stock-text { font-size:12px;font-weight:600; }
+/* Modal */
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);
+                 z-index:200;display:flex;align-items:center;justify-content:center;
+                 padding:16px;overflow-y:auto; }
+.modal-overlay.hidden { display:none; }
+.modal { background:#fff;border-radius:var(--radius);padding:20px;
+         width:100%;max-width:480px;max-height:90vh;overflow-y:auto; }
+.modal h3 { font-size:18px;font-weight:700;margin-bottom:16px; }
+.form-group { margin-bottom:12px; }
+.form-group label { display:block;font-size:13px;color:var(--gray);margin-bottom:4px; }
+.form-group input, .form-group textarea, .form-group select {
+  width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid #d1d5db;
+  font-size:14px;outline:none; }
+.form-group input:focus, .form-group textarea:focus {
+  border-color:var(--primary); }
+.form-row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
+.modal-actions { display:flex;gap:10px;margin-top:16px; }
+.product-photo { width:80px;height:80px;border-radius:8px;object-fit:cover;
+                 margin-bottom:8px; }
+.tab-bar { display:flex;gap:4px;margin-bottom:16px; }
+.tab { padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px;
+       background:#e5e7eb;color:#374151;font-weight:500;border:none; }
+.tab.active { background:var(--primary);color:#fff; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+/* Boxes */
+.box-list { display:grid;gap:8px; }
+.box-row { background:#fff;border-radius:10px;box-shadow:var(--shadow);
+           padding:12px;display:flex;align-items:center;justify-content:space-between; }
+.box-name { font-weight:600;font-size:15px; }
+.box-dims { font-size:12px;color:var(--gray); }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>⚙️ Налаштування</h1>
+  <div class="header-links">
+    <a href="/">📦 Оператор</a>
+    <a href="/report">📊 Звіт</a>
+  </div>
+</div>
+<div class="container">
+  <div class="tab-bar">
+    <button class="tab active" onclick="showTab('products')">🔧 Товари (16 слотів)</button>
+    <button class="tab" onclick="showTab('boxes')">📦 Коробки</button>
+  </div>
+
+  <!-- Products tab -->
+  <div id="tab-products" class="tab-content active">
+    <div class="actions-bar">
+      <button class="btn btn-outline" onclick="initProducts()">🚀 Ініціалізувати 16 товарів</button>
+      <button class="btn btn-outline" onclick="initBoxes()">📦 Додати стандартні коробки</button>
+    </div>
+    <div class="section-title">Комірки серводвигунів (Плата 0x40)</div>
+    <div class="grid-16" id="cellsGrid"></div>
+  </div>
+
+  <!-- Boxes tab -->
+  <div id="tab-boxes" class="tab-content">
+    <div class="actions-bar">
+      <button class="btn btn-primary" onclick="openBoxModal()">+ Нова коробка</button>
+    </div>
+    <div class="box-list" id="boxList"></div>
+  </div>
+</div>
+
+<!-- Product Modal -->
+<div id="productModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="modalTitle">Комірка 0</h3>
+    <input type="hidden" id="editId">
+    <input type="hidden" id="editChannel">
+    <div id="photoPreview"></div>
+    <div class="form-group">
+      <label>Артикул *</label>
+      <input id="fArticl" placeholder="наприклад: 30770">
+    </div>
+    <div class="form-group">
+      <label>Назва товару</label>
+      <input id="fName" placeholder="наприклад: Кабель USB-C 1м">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Місткість комірки (шт)</label>
+        <input id="fCapacity" type="number" value="20">
+      </div>
+      <div class="form-group">
+        <label>Залишок зараз (шт)</label>
+        <input id="fStock" type="number" value="0">
+      </div>
+    </div>
+    <div class="section-title" style="margin-bottom:8px;font-size:14px">Розміри товару (мм)</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Довжина</label><input id="fLength" type="number" value="0">
+      </div>
+      <div class="form-group">
+        <label>Ширина</label><input id="fWidth" type="number" value="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Висота</label><input id="fHeight" type="number" value="0">
+      </div>
+      <div class="form-group">
+        <label>Вага (г)</label><input id="fWeight" type="number" value="0">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Кількість стікерів (0 = не потрібно)</label>
+      <input id="fStickerCount" type="number" value="0">
+    </div>
+    <div class="form-group">
+      <label>Опис стікера</label>
+      <input id="fStickerNote" placeholder="наприклад: EAC стікер">
+    </div>
+    <div class="form-group">
+      <label>Коментар для оператора</label>
+      <textarea id="fComment" rows="2" placeholder="Додаткові інструкції..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Фото товару</label>
+      <input type="file" id="fPhoto" accept="image/*">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="saveProduct()">💾 Зберегти</button>
+      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Box Modal -->
+<div id="boxModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>Нова коробка</h3>
+    <div class="form-group">
+      <label>Назва (напр. А - 30×40×20)</label>
+      <input id="bName" placeholder="A - 30×40×20">
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label>Довжина (мм)</label><input id="bLength" type="number"></div>
+      <div class="form-group"><label>Ширина (мм)</label><input id="bWidth" type="number"></div>
+    </div>
+    <div class="form-group"><label>Висота (мм)</label><input id="bHeight" type="number"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="saveBox()">💾 Зберегти</button>
+      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let products = [];
+let boxes = [];
+
+async function init() {
+  await loadProducts();
+  await loadBoxes();
+}
+
+async function loadProducts() {
+  const r = await fetch('/api/products');
+  products = await r.json();
+  renderCells();
+}
+
+async function loadBoxes() {
+  const r = await fetch('/api/boxes');
+  boxes = await r.json();
+  renderBoxes();
+}
+
+function renderCells() {
+  const grid = document.getElementById('cellsGrid');
+  const cells = [];
+  // 16 слотів
+  for (let ch = 0; ch < 16; ch++) {
+    const p = products.find(x => x.servo_channel === ch && x.servo_board === '0x40');
+    cells.push(renderCell(ch, p));
+  }
+  grid.innerHTML = cells.join('');
+}
+
+function renderCell(ch, product) {
+  if (!product) {
+    return `<div class="cell-card empty" onclick="openProductModal(null, ${ch})">
+      <div class="cell-num">Канал ${ch}</div>
+      <div class="cell-art" style="color:#9ca3af">+ Додати товар</div>
+    </div>`;
+  }
+
+  const pct = product.cell_capacity > 0
+    ? Math.round((product.cell_stock / product.cell_capacity) * 100) : 0;
+  const cls = pct === 0 ? 'empty' : pct <= 25 ? 'low' : '';
+
+  return `<div class="cell-card" onclick="openProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')}, ${ch})">
+    <div class="cell-num">Канал ${ch}</div>
+    <div class="cell-art">${product.articl}</div>
+    <div class="cell-name">${product.name || '—'}</div>
+    <div class="cell-stock">
+      <div class="stock-bar"><div class="stock-fill ${cls}" style="width:${pct}%"></div></div>
+      <span class="stock-text ${cls === 'empty' ? 'stock-empty' : cls === 'low' ? 'stock-low' : ''}">${product.cell_stock}/${product.cell_capacity}</span>
+    </div>
+    ${product.sticker_count > 0 ? '<div style="font-size:11px;color:#f59e0b;margin-top:4px">🏷️ Стікер</div>' : ''}
+  </div>`;
+}
+
+function openProductModal(product, channel) {
+  document.getElementById('modalTitle').textContent =
+    product ? `Редагувати — Канал ${channel}` : `Новий товар — Канал ${channel}`;
+  document.getElementById('editId').value = product ? product.id : '';
+  document.getElementById('editChannel').value = channel;
+  document.getElementById('fArticl').value = product ? product.articl : '';
+  document.getElementById('fName').value = product ? product.name : '';
+  document.getElementById('fCapacity').value = product ? product.cell_capacity : 20;
+  document.getElementById('fStock').value = product ? product.cell_stock : 0;
+  document.getElementById('fLength').value = product ? product.length : 0;
+  document.getElementById('fWidth').value = product ? product.width : 0;
+  document.getElementById('fHeight').value = product ? product.height : 0;
+  document.getElementById('fWeight').value = product ? product.weight : 0;
+  document.getElementById('fStickerCount').value = product ? product.sticker_count : 0;
+  document.getElementById('fStickerNote').value = product ? product.sticker_note : '';
+  document.getElementById('fComment').value = product ? product.comment : '';
+
+  const photoDiv = document.getElementById('photoPreview');
+  photoDiv.innerHTML = product && product.photo
+    ? `<img src="${product.photo}" class="product-photo">` : '';
+
+  document.getElementById('productModal').classList.remove('hidden');
+}
+
+async function saveProduct() {
+  const id = document.getElementById('editId').value;
+  const channel = parseInt(document.getElementById('editChannel').value);
+  const data = {
+    articl: document.getElementById('fArticl').value.trim(),
+    name: document.getElementById('fName').value.trim(),
+    servo_board: 0x40,
+    servo_channel: channel,
+    cell_capacity: document.getElementById('fCapacity').value,
+    cell_stock: document.getElementById('fStock').value,
+    length: document.getElementById('fLength').value,
+    width: document.getElementById('fWidth').value,
+    height: document.getElementById('fHeight').value,
+    weight: document.getElementById('fWeight').value,
+    sticker_count: document.getElementById('fStickerCount').value,
+    sticker_note: document.getElementById('fStickerNote').value,
+    comment: document.getElementById('fComment').value,
+  };
+
+  if (!data.articl) { alert('Введіть артикул'); return; }
+
+  let savedId = id;
+  if (id) {
+    await fetch(`/api/products/${id}`, {
+      method: 'PUT', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+  } else {
+    const r = await fetch('/api/products', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(data)
+    });
+    if (!r.ok) { const e = await r.json(); alert(e.error); return; }
+    const created = await r.json();
+    savedId = created.id;
+  }
+
+  // Upload photo if selected
+  const photoFile = document.getElementById('fPhoto').files[0];
+  if (photoFile && savedId) {
+    const fd = new FormData();
+    fd.append('photo', photoFile);
+    await fetch(`/api/products/${savedId}/photo`, {method:'POST', body: fd});
+  }
+
+  closeModal();
+  await loadProducts();
+}
+
+function openBoxModal() {
+  document.getElementById('boxModal').classList.remove('hidden');
+}
+
+async function saveBox() {
+  const data = {
+    name: document.getElementById('bName').value.trim(),
+    length: document.getElementById('bLength').value,
+    width: document.getElementById('bWidth').value,
+    height: document.getElementById('bHeight').value,
+  };
+  if (!data.name) { alert('Введіть назву'); return; }
+  await fetch('/api/boxes', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(data)
+  });
+  closeModal();
+  await loadBoxes();
+}
+
+function renderBoxes() {
+  const list = document.getElementById('boxList');
+  if (!boxes.length) {
+    list.innerHTML = '<div style="color:#6b7280;padding:20px;text-align:center">Немає коробок</div>';
+    return;
+  }
+  list.innerHTML = boxes.map(b => `
+    <div class="box-row">
+      <div>
+        <div class="box-name">${b.name}</div>
+        <div class="box-dims">${b.length}×${b.width}×${b.height} мм</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function initProducts() {
+  const r = await fetch('/api/products/init_16', {method:'POST'});
+  const d = await r.json();
+  alert(`Ініціалізовано ${d.added} товарів`);
+  await loadProducts();
+}
+
+async function initBoxes() {
+  const r = await fetch('/api/boxes/init', {method:'POST'});
+  const d = await r.json();
+  alert(`Додано ${d.added} коробок`);
+  await loadBoxes();
+}
+
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(`tab-${name}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('productModal').classList.add('hidden');
+  document.getElementById('boxModal').classList.add('hidden');
+}
+
+init();
+</script>
+</body>
+</html>

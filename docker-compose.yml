@@ -1,0 +1,13 @@
+services:
+  web:
+    image: ghcr.io/bohdankyslii/pick-to-belt:latest
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data:/app/data          # база даних SQLite
+      - ./static/uploads:/app/static/uploads  # фото товарів
+    devices:
+      - /dev/i2c-1:/dev/i2c-1    # I2C шина для PCA9685
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-pick-to-belt-prod}

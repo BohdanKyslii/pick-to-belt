@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pick-to-Belt | Оператор</title>
+<style>
+:root {
+  --primary: #2563eb;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --gray: #6b7280;
+  --light: #f3f4f6;
+  --white: #ffffff;
+  --radius: 12px;
+  --shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+       background: #f0f4f8; min-height: 100vh; }
+
+/* Header */
+.header { background: var(--primary); color: #fff; padding: 12px 16px;
+          display: flex; align-items: center; justify-content: space-between;
+          position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
+.header h1 { font-size: 18px; font-weight: 700; }
+.header-links a { color: rgba(255,255,255,.85); text-decoration: none;
+                  font-size: 13px; margin-left: 12px; }
+.sim-badge { background: #f59e0b; color: #000; padding: 2px 8px;
+             border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+/* Actions bar */
+.actions-bar { padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+               background: #fff; border-bottom: 1px solid #e5e7eb; }
+.btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
+       font-size: 14px; font-weight: 600; transition: .15s; }
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: #1d4ed8; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #15803d; }
+.btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-outline:hover { background: #eff6ff; }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Orders list */
+.orders-list { padding: 12px 16px; }
+.order-card { background: var(--white); border-radius: var(--radius);
+              box-shadow: var(--shadow); margin-bottom: 12px;
+              border: 2px solid transparent; transition: .2s; }
+.order-card.active { border-color: var(--primary); }
+.order-card.packed { border-color: var(--success); opacity: .7; }
+
+.order-header { padding: 14px 16px; display: flex; align-items: center;
+                justify-content: space-between; cursor: pointer;
+                border-radius: var(--radius); }
+.order-title { font-size: 16px; font-weight: 700; }
+.order-meta { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.status-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.badge-pending  { background: #fef3c7; color: #92400e; }
+.badge-picking  { background: #dbeafe; color: #1e40af; }
+.badge-packed   { background: #d1fae5; color: #065f46; }
+
+.order-body { padding: 0 16px 16px; }
+
+/* Box selector */
+.box-selector { margin-bottom: 12px; }
+.box-selector label { font-size: 13px; color: var(--gray); display: block; margin-bottom: 4px; }
+.box-selector select { width: 100%; padding: 8px 12px; border-radius: 8px;
+                        border: 1.5px solid #d1d5db; font-size: 15px; }
+
+/* Items list */
+.item-row { display: flex; align-items: flex-start; padding: 10px 0;
+            border-bottom: 1px solid #f3f4f6; gap: 10px; }
+.item-row:last-child { border-bottom: none; }
+.item-photo { width: 52px; height: 52px; border-radius: 8px; object-fit: cover;
+              background: #f3f4f6; flex-shrink: 0; }
+.item-photo-placeholder { width: 52px; height: 52px; border-radius: 8px;
+                           background: #e5e7eb; display: flex; align-items: center;
+                           justify-content: center; font-size: 20px; flex-shrink: 0; }
+.item-info { flex: 1; min-width: 0; }
+.item-name { font-size: 15px; font-weight: 600; }
+.item-art  { font-size: 12px; color: var(--gray); }
+.item-qty  { font-size: 14px; margin-top: 4px; }
+.item-qty .picked { color: var(--success); font-weight: 700; }
+.item-qty .need   { color: var(--danger); font-weight: 700; }
+
+/* Alerts */
+.alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+.alert-warning { background: #fef3c7; border-left: 4px solid #f59e0b; color: #78350f; }
+.alert-danger  { background: #fee2e2; border-left: 4px solid var(--danger); color: #7f1d1d; }
+.alert-info    { background: #dbeafe; border-left: 4px solid var(--primary); color: #1e3a8a; }
+.alert-success { background: #d1fae5; border-left: 4px solid var(--success); color: #064e3b; }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5);
+                 z-index: 200; display: flex; align-items: center; justify-content: center;
+                 padding: 16px; }
+.modal-overlay.hidden { display: none; }
+.modal { background: #fff; border-radius: var(--radius); padding: 20px;
+         width: 100%; max-width: 400px; }
+.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.modal p  { font-size: 15px; color: #374151; margin-bottom: 16px; }
+.modal-actions { display: flex; gap: 10px; }
+
+/* Stock warning */
+.stock-low    { color: var(--warning); font-weight: 700; }
+.stock-empty  { color: var(--danger);  font-weight: 700; }
+.sticker-note { background: #fef3c7; padding: 4px 8px; border-radius: 6px;
+                font-size: 12px; color: #78350f; margin-top: 4px; }
+
+/* Loading */
+.loading { text-align: center; padding: 40px; color: var(--gray); font-size: 16px; }
+
+/* Conveyor animation */
+@keyframes conveyor { 0%{background-position:0 0} 100%{background-position:40px 0} }
+.conveyor-active { background: repeating-linear-gradient(
+    90deg, #2563eb 0,#2563eb 20px,#1d4ed8 20px,#1d4ed8 40px);
+  background-size: 40px 100%;
+  animation: conveyor 1s linear infinite;
+  color:#fff; text-align:center; padding:8px; border-radius:8px;
+  font-size:13px; font-weight:600; margin-bottom:12px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📦 Pick-to-Belt</h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span id="simBadge" class="sim-badge hidden">СИМУЛЯЦІЯ</span>
+    <div class="header-links">
+      <a href="/admin">⚙️ Налаштування</a>
+      <a href="/report">📊 Звіт</a>
+    </div>
+  </div>
+</div>
+
+<div class="actions-bar">
+  <button class="btn btn-primary" onclick="loadOrders()">🔄 Оновити</button>
+  <button class="btn btn-outline" onclick="loadFromJson()">📂 Завантажити JSON</button>
+</div>
+
+<div id="app" class="orders-list">
+  <div class="loading">Завантаження замовлень...</div>
+</div>
+
+<!-- Modal: manual item -->
+<div id="manualModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>⚠️ Товар відсутній в системі</h3>
+    <p id="manualModalText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="confirmManual()">✅ Поклав в коробку</button>
+      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: partial stock -->
+<div id="partialModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>⚠️ Не вистачає товару</h3>
+    <p id="partialModalText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="confirmManual()">✅ Доклав решту</button>
+      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let orders = [];
+let boxes = [];
+let currentManualItemId = null;
+let currentOrderDbId = null;
+let isSimulation = false;
+
+async function init() {
+  await loadBoxes();
+  await loadOrders();
+  await checkSimulation();
+  setInterval(loadOrders, 10000);
+}
+
+async function checkSimulation() {
+  // Перевіряємо чи є серво в режимі симуляції
+  try {
+    const r = await fetch('/api/products');
+    // Якщо немає продуктів — швидше за все симуляція
+    const data = await r.json();
+    isSimulation = data.length === 0;
+    document.getElementById('simBadge').classList.toggle('hidden', !isSimulation);
+  } catch {}
+}
+
+async function loadBoxes() {
+  const r = await fetch('/api/boxes');
+  boxes = await r.json();
+}
+
+async function loadOrders() {
+  const r = await fetch('/api/orders');
+  orders = await r.json();
+  renderOrders();
+}
+
+async function loadFromJson() {
+  const r = await fetch('/api/orders/load', {method:'POST'});
+  const data = await r.json();
+  if (data.error) { alert(data.error); return; }
+  alert(`Завантажено ${data.added} нових замовлень`);
+  await loadOrders();
+}
+
+function renderOrders() {
+  const app = document.getElementById('app');
+  if (!orders.length) {
+    app.innerHTML = '<div class="loading">✅ Немає активних замовлень</div>';
+    return;
+  }
+
+  app.innerHTML = orders.map(o => renderOrder(o)).join('');
+}
+
+function renderOrder(o) {
+  const statusLabels = {pending:'Очікує', picking:'Комплектація', packed:'Запаковано'};
+  const statusClass  = {pending:'badge-pending', picking:'badge-picking', packed:'badge-packed'};
+
+  // Alerts для замовлення
+  const manualItems = o.items.filter(i => i.is_manual || i.status === 'manual');
+  const partialItems = o.items.filter(i => i.status === 'partial');
+
+  let alerts = '';
+  if (manualItems.length) {
+    alerts += `<div class="alert alert-warning">
+      ⚠️ ${manualItems.length} товар(ів) потрібно покласти вручну
+    </div>`;
+  }
+  if (partialItems.length) {
+    alerts += `<div class="alert alert-warning">
+      ⚠️ Деяких товарів не вистачає на полиці — докладіть вручну
+    </div>`;
+  }
+
+  // Box selector (тільки для pending)
+  let boxSelector = '';
+  if (o.status === 'pending') {
+    const opts = boxes.map(b =>
+      `<option value="${b.id}">${b.name}</option>`
+    ).join('');
+    boxSelector = `<div class="box-selector">
+      <label>📦 Оберіть коробку:</label>
+      <select id="box_${o.id}">${opts || '<option>Немає коробок</option>'}</select>
+    </div>`;
+  } else if (o.box) {
+    boxSelector = `<div class="alert alert-info" style="margin-bottom:12px">
+      📦 Коробка: <strong>${o.box.name}</strong> (${o.box.length}×${o.box.width}×${o.box.height} мм)
+    </div>`;
+  }
+
+  // Items
+  const itemsHtml = o.items.map(i => renderItem(i, o)).join('');
+
+  // Action buttons
+  let actionBtn = '';
+  if (o.status === 'pending') {
+    actionBtn = `<button class="btn btn-primary" style="width:100%;margin-top:12px;padding:14px"
+      onclick="startOrder(${o.id})">🚀 Комплектація</button>`;
+  } else if (o.status === 'picking') {
+    const allDone = o.items.every(i => i.status === 'done' || i.status === 'manual');
+    actionBtn = `<button class="btn btn-success" style="width:100%;margin-top:12px;padding:14px"
+      ${!allDone ? 'disabled' : ''} onclick="packOrder(${o.id})">
+      ✅ Запаковано</button>`;
+    if (!allDone) {
+      actionBtn += `<p style="text-align:center;color:#6b7280;font-size:12px;margin-top:6px">
+        Підтвердіть всі ручні позиції</p>`;
+    }
+  }
+
+  return `<div class="order-card ${o.status}" id="order_${o.id}">
+    <div class="order-header" onclick="toggleOrder(${o.id})">
+      <div>
+        <div class="order-title">🔖 ${o.order_id}</div>
+        <div class="order-meta">${o.items.length} позицій • ${new Date(o.created_at).toLocaleDateString('uk')}</div>
+      </div>
+      <span class="status-badge ${statusClass[o.status]}">${statusLabels[o.status]}</span>
+    </div>
+    <div class="order-body" id="body_${o.id}" ${o.status === 'pending' ? 'style="display:none"' : ''}>
+      ${o.status === 'picking' ? '<div class="conveyor-active">🏭 Конвеєр активний</div>' : ''}
+      ${alerts}
+      ${boxSelector}
+      <div>${itemsHtml}</div>
+      ${actionBtn}
+    </div>
+  </div>`;
+}
+
+function renderItem(item, order) {
+  const photo = item.photo
+    ? `<img src="${item.photo}" class="item-photo" onerror="this.style.display='none'">`
+    : `<div class="item-photo-placeholder">📦</div>`;
+
+  let qtyHtml = '';
+  if (item.status === 'done') {
+    qtyHtml = `<span class="picked">✅ ${item.quantity_picked} шт подано</span>`;
+  } else if (item.status === 'partial') {
+    const need = item.quantity_ordered - item.quantity_picked;
+    qtyHtml = `<span class="picked">${item.quantity_picked} шт подано</span>
+               <span class="need"> + доклади ${need} шт вручну</span>`;
+  } else if (item.status === 'manual' || item.is_manual) {
+    qtyHtml = `<span class="need">⚠️ ${item.quantity_ordered} шт вручну з полиці</span>`;
+  } else {
+    qtyHtml = `${item.quantity_ordered} шт`;
+  }
+
+  // Stock warning
+  let stockWarn = '';
+  if (item.has_servo && item.cell_stock <= 3 && item.cell_stock > 0) {
+    stockWarn = `<div class="stock-low">⚠️ Залишок в комірці: ${item.cell_stock} шт</div>`;
+  } else if (item.has_servo && item.cell_stock === 0) {
+    stockWarn = `<div class="stock-empty">🔴 Комірка порожня!</div>`;
+  }
+
+  // Sticker note
+  let stickerHtml = '';
+  if (item.sticker_count > 0) {
+    stickerHtml = `<div class="sticker-note">🏷️ Наклей ${item.sticker_count} стікер(ів): ${item.sticker_note}</div>`;
+  }
+
+  // Comment
+  let commentHtml = '';
+  if (item.comment) {
+    commentHtml = `<div class="sticker-note" style="background:#dbeafe;color:#1e3a8a">
+      💬 ${item.comment}</div>`;
+  }
+
+  // Manual confirm button
+  let manualBtn = '';
+  if ((item.status === 'manual' || item.status === 'partial') && order.status === 'picking') {
+    manualBtn = `<button class="btn btn-success btn-sm" style="margin-top:6px"
+      onclick="showManual(${item.id}, '${item.articl}', '${item.name}', ${item.quantity_ordered - item.quantity_picked}, ${order.id})">
+      ✅ Поклав</button>`;
+  }
+
+  return `<div class="item-row">
+    ${photo}
+    <div class="item-info">
+      <div class="item-name">${item.name}</div>
+      <div class="item-art">Арт: ${item.articl}</div>
+      <div class="item-qty">${qtyHtml}</div>
+      ${stockWarn}
+      ${stickerHtml}
+      ${commentHtml}
+      ${manualBtn}
+    </div>
+  </div>`;
+}
+
+function toggleOrder(id) {
+  const body = document.getElementById(`body_${id}`);
+  body.style.display = body.style.display === 'none' ? '' : 'none';
+}
+
+async function startOrder(orderId) {
+  const boxSel = document.getElementById(`box_${orderId}`);
+  const boxId = boxSel ? boxSel.value : null;
+  const r = await fetch(`/api/orders/${orderId}/start`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({box_id: boxId})
+  });
+  await loadOrders();
+}
+
+async function packOrder(orderId) {
+  await fetch(`/api/orders/${orderId}/packed`, {method:'POST'});
+  await loadOrders();
+}
+
+function showManual(itemId, articl, name, qty, orderId) {
+  currentManualItemId = itemId;
+  currentOrderDbId = orderId;
+  const text = `Артикул <strong>${articl}</strong> — «${name}»<br>
+    Покладіть <strong>${qty} шт</strong> вручну з полиці в коробку.`;
+  document.getElementById('manualModalText').innerHTML = text;
+  document.getElementById('manualModal').classList.remove('hidden');
+}
+
+async function confirmManual() {
+  if (!currentManualItemId) return;
+  await fetch(`/api/orders/${currentOrderDbId}/confirm_manual`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({item_id: currentManualItemId})
+  });
+  closeModal();
+  await loadOrders();
+}
+
+function closeModal() {
+  document.getElementById('manualModal').classList.add('hidden');
+  document.getElementById('partialModal').classList.add('hidden');
+  currentManualItemId = null;
+}
+
+init();
+</script>
+</body>
+</html>

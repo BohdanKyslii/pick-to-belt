@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+*.db
+*.sqlite3
+.env
+static/uploads/*
+!static/uploads/.gitkeep
+data/*.db
+data/*.json
+!data/orders_test.json
+.DS_Store
