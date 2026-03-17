@@ -184,12 +184,10 @@ async function init() {
 }
 
 async function checkSimulation() {
-  // Перевіряємо чи є серво в режимі симуляції
   try {
-    const r = await fetch('/api/products');
-    // Якщо немає продуктів — швидше за все симуляція
+    const r = await fetch('/api/status');
     const data = await r.json();
-    isSimulation = data.length === 0;
+    isSimulation = data.simulation;
     document.getElementById('simBadge').classList.toggle('hidden', !isSimulation);
   } catch {}
 }

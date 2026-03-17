@@ -39,6 +39,13 @@ def report_page():
 
 
 # ─── API: Замовлення ──────────────────────────────────────────────────────────
+@bp.route("/api/status")
+def get_status():
+    from . import servo_controller as servo
+    return jsonify({
+        "simulation": servo.is_simulation(),
+        "i2c_available": not servo.is_simulation()
+    })
 
 @bp.route("/api/orders")
 def get_orders():
