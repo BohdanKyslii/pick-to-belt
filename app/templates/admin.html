@@ -6,7 +6,8 @@
 <title>Pick-to-Belt | Налаштування</title>
 <style>
 :root { --primary:#2563eb; --success:#16a34a; --danger:#dc2626;
-        --gray:#6b7280; --radius:12px; --shadow:0 2px 8px rgba(0,0,0,.12); }
+        --warning:#d97706; --gray:#6b7280; --radius:12px;
+        --shadow:0 2px 8px rgba(0,0,0,.12); }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
        background:#f0f4f8; min-height:100vh; }
@@ -20,61 +21,96 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .btn { padding:8px 16px;border-radius:8px;border:none;cursor:pointer;
        font-size:14px;font-weight:600;transition:.15s; }
 .btn-primary { background:var(--primary);color:#fff; }
+.btn-primary:hover { background:#1d4ed8; }
 .btn-success { background:var(--success);color:#fff; }
+.btn-success:hover { background:#15803d; }
 .btn-danger  { background:var(--danger);color:#fff; }
+.btn-danger:hover  { background:#b91c1c; }
 .btn-outline { background:#fff;color:var(--primary);border:1.5px solid var(--primary); }
+.btn-outline:hover { background:#eff6ff; }
+.btn-ghost   { background:transparent;color:var(--gray);border:none;padding:4px 8px;font-size:13px;cursor:pointer; }
 .btn-sm { padding:5px 10px;font-size:12px; }
+.hidden { display:none !important; }
+
 .actions-bar { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;
                background:#fff;padding:12px;border-radius:var(--radius);
                box-shadow:var(--shadow); }
-.section-title { font-size:16px;font-weight:700;margin-bottom:10px;color:#1f2937; }
-.grid-16 { display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px; }
+.section-title { font-size:15px;font-weight:700;margin-bottom:10px;color:#1f2937; }
+
+/* Cells grid */
+.grid-16 { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px; }
 .cell-card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
-             padding:14px;border:2px solid transparent;transition:.2s;cursor:pointer; }
+             padding:12px;border:2px solid transparent;transition:.2s;cursor:pointer;
+             overflow:hidden; }
 .cell-card:hover { border-color:var(--primary); }
 .cell-card.empty { border-style:dashed;border-color:#d1d5db; }
-.cell-num { font-size:11px;color:var(--gray);margin-bottom:4px; }
-.cell-art  { font-size:14px;font-weight:700; }
-.cell-name { font-size:12px;color:var(--gray);margin-top:2px;
+.cell-num  { font-size:11px;color:var(--gray);margin-bottom:3px; }
+.cell-art  { font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+.cell-name { font-size:11px;color:var(--gray);margin-top:1px;
              white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
-.cell-stock { display:flex;justify-content:space-between;align-items:center;
-              margin-top:8px; }
-.stock-bar { flex:1;height:6px;background:#e5e7eb;border-radius:3px;margin-right:8px;overflow:hidden; }
+.cell-stock { display:flex;justify-content:space-between;align-items:center;margin-top:7px; }
+.stock-bar  { flex:1;height:5px;background:#e5e7eb;border-radius:3px;margin-right:8px;overflow:hidden; }
 .stock-fill { height:100%;border-radius:3px;background:var(--success);transition:.3s; }
-.stock-fill.low { background:#f59e0b; }
+.stock-fill.low   { background:#f59e0b; }
 .stock-fill.empty { background:var(--danger); }
-.stock-text { font-size:12px;font-weight:600; }
-/* Modal */
-.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);
-                 z-index:200;display:flex;align-items:center;justify-content:center;
-                 padding:16px;overflow-y:auto; }
-.modal-overlay.hidden { display:none; }
-.modal { background:#fff;border-radius:var(--radius);padding:20px;
-         width:100%;max-width:480px;max-height:90vh;overflow-y:auto; }
-.modal h3 { font-size:18px;font-weight:700;margin-bottom:16px; }
-.form-group { margin-bottom:12px; }
-.form-group label { display:block;font-size:13px;color:var(--gray);margin-bottom:4px; }
-.form-group input, .form-group textarea, .form-group select {
-  width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid #d1d5db;
-  font-size:14px;outline:none; }
-.form-group input:focus, .form-group textarea:focus {
-  border-color:var(--primary); }
-.form-row { display:grid;grid-template-columns:1fr 1fr;gap:10px; }
-.modal-actions { display:flex;gap:10px;margin-top:16px; }
-.product-photo { width:80px;height:80px;border-radius:8px;object-fit:cover;
-                 margin-bottom:8px; }
+.stock-text { font-size:11px;font-weight:700; }
+.stock-text.low   { color:#d97706; }
+.stock-text.empty { color:var(--danger); }
+.cell-thumb { width:100%;height:60px;object-fit:cover;border-radius:6px;
+              margin-top:6px;display:block; }
+
+/* Tab */
 .tab-bar { display:flex;gap:4px;margin-bottom:16px; }
 .tab { padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px;
        background:#e5e7eb;color:#374151;font-weight:500;border:none; }
 .tab.active { background:var(--primary);color:#fff; }
 .tab-content { display:none; }
 .tab-content.active { display:block; }
+
 /* Boxes */
-.box-list { display:grid;gap:8px; }
-.box-row { background:#fff;border-radius:10px;box-shadow:var(--shadow);
-           padding:12px;display:flex;align-items:center;justify-content:space-between; }
-.box-name { font-weight:600;font-size:15px; }
-.box-dims { font-size:12px;color:var(--gray); }
+.box-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px; }
+.box-card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:14px; }
+.box-card-header { display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px; }
+.box-card-name  { font-weight:700;font-size:15px; }
+.box-card-actions { display:flex;gap:4px; }
+.box-dims-grid { display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px; }
+.box-dim-label { color:var(--gray);font-size:11px; }
+.box-dim-val   { font-weight:600; }
+
+/* Modal */
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);
+                 z-index:200;display:flex;align-items:center;justify-content:center;
+                 padding:16px;overflow-y:auto; }
+.modal-overlay.hidden { display:none; }
+.modal { background:#fff;border-radius:var(--radius);padding:20px;
+         width:100%;max-width:500px;max-height:92vh;overflow-y:auto; }
+.modal h3 { font-size:17px;font-weight:700;margin-bottom:14px; }
+.form-group { margin-bottom:10px; }
+.form-group label { display:block;font-size:12px;color:var(--gray);margin-bottom:3px;font-weight:600; }
+.form-group input,.form-group textarea,.form-group select {
+  width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #d1d5db;
+  font-size:14px;outline:none; }
+.form-group input:focus,.form-group textarea:focus { border-color:var(--primary); }
+.form-row   { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
+.form-row-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px; }
+.modal-actions { display:flex;gap:8px;margin-top:14px;flex-wrap:wrap; }
+.modal-divider { border:none;border-top:1px solid #e5e7eb;margin:12px 0; }
+
+/* Photo preview */
+.photo-area { position:relative;margin-bottom:10px; }
+.photo-preview { width:80px;height:80px;border-radius:8px;object-fit:cover;display:block; }
+.photo-placeholder { width:80px;height:80px;border-radius:8px;background:#e5e7eb;
+                     display:flex;align-items:center;justify-content:center;font-size:30px; }
+.photo-del-btn { position:absolute;top:-6px;left:68px;background:var(--danger);
+                 color:#fff;border:none;border-radius:50%;width:20px;height:20px;
+                 cursor:pointer;font-size:11px;line-height:20px;text-align:center; }
+
+/* Articl lookup */
+.articl-row { display:flex;gap:6px; }
+.articl-row input { flex:1; }
+.articl-status { font-size:11px;margin-top:3px; }
+.articl-found { color:var(--success); }
+.articl-new   { color:var(--warning); }
 </style>
 </head>
 <body>
@@ -87,8 +123,8 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 </div>
 <div class="container">
   <div class="tab-bar">
-    <button class="tab active" onclick="showTab('products')">🔧 Товари (16 слотів)</button>
-    <button class="tab" onclick="showTab('boxes')">📦 Коробки</button>
+    <button class="tab active" onclick="showTab('products', event)">🔧 Товари (16 слотів)</button>
+    <button class="tab" onclick="showTab('boxes', event)">📦 Коробки</button>
   </div>
 
   <!-- Products tab -->
@@ -104,72 +140,88 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   <!-- Boxes tab -->
   <div id="tab-boxes" class="tab-content">
     <div class="actions-bar">
-      <button class="btn btn-primary" onclick="openBoxModal()">+ Нова коробка</button>
+      <button class="btn btn-primary" onclick="openBoxModal(null)">+ Нова коробка</button>
     </div>
-    <div class="box-list" id="boxList"></div>
+    <div class="box-grid" id="boxGrid"></div>
   </div>
 </div>
 
 <!-- Product Modal -->
 <div id="productModal" class="modal-overlay hidden">
   <div class="modal">
-    <h3 id="modalTitle">Комірка 0</h3>
+    <h3 id="modalTitle">Комірка</h3>
     <input type="hidden" id="editId">
     <input type="hidden" id="editChannel">
-    <div id="photoPreview"></div>
+
+    <!-- Articl lookup -->
     <div class="form-group">
       <label>Артикул *</label>
-      <input id="fArticl" placeholder="наприклад: 30770">
+      <div class="articl-row">
+        <input id="fArticl" placeholder="Введіть артикул" onblur="lookupArticl()">
+        <button class="btn btn-outline btn-sm" onclick="lookupArticl()">🔍 Знайти</button>
+      </div>
+      <div id="artStatus" class="articl-status"></div>
     </div>
+
     <div class="form-group">
       <label>Назва товару</label>
       <input id="fName" placeholder="наприклад: Кабель USB-C 1м">
     </div>
+
+    <!-- Photo -->
+    <div class="form-group">
+      <label>Фото товару</label>
+      <div class="photo-area">
+        <div id="photoPreview" class="photo-placeholder">📦</div>
+        <button id="photoDelBtn" class="photo-del-btn hidden" onclick="deletePhoto()" title="Видалити фото">✕</button>
+      </div>
+      <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this)">
+    </div>
+
+    <hr class="modal-divider">
+
     <div class="form-row">
       <div class="form-group">
         <label>Місткість комірки (шт)</label>
-        <input id="fCapacity" type="number" value="20">
+        <input id="fCapacity" type="number" value="20" min="1">
       </div>
       <div class="form-group">
         <label>Залишок зараз (шт)</label>
-        <input id="fStock" type="number" value="0">
+        <input id="fStock" type="number" value="0" min="0">
       </div>
     </div>
-    <div class="section-title" style="margin-bottom:8px;font-size:14px">Розміри товару (мм)</div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Довжина</label><input id="fLength" type="number" value="0">
-      </div>
-      <div class="form-group">
-        <label>Ширина</label><input id="fWidth" type="number" value="0">
-      </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Висота</label><input id="fHeight" type="number" value="0">
-      </div>
-      <div class="form-group">
-        <label>Вага (г)</label><input id="fWeight" type="number" value="0">
-      </div>
+
+    <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри товару (см)</div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Довжина</label><input id="fLength" type="number" step="0.1" value="0"></div>
+      <div class="form-group"><label>Ширина</label><input id="fWidth"  type="number" step="0.1" value="0"></div>
+      <div class="form-group"><label>Висота</label><input id="fHeight" type="number" step="0.1" value="0"></div>
     </div>
     <div class="form-group">
-      <label>Кількість стікерів (0 = не потрібно)</label>
-      <input id="fStickerCount" type="number" value="0">
+      <label>Вага (г)</label>
+      <input id="fWeight" type="number" step="1" value="0">
     </div>
-    <div class="form-group">
-      <label>Опис стікера</label>
-      <input id="fStickerNote" placeholder="наприклад: EAC стікер">
+
+    <hr class="modal-divider">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>К-сть стікерів (0 = не потрібно)</label>
+        <input id="fStickerCount" type="number" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Опис стікера</label>
+        <input id="fStickerNote" placeholder="наприклад: EAC">
+      </div>
     </div>
     <div class="form-group">
       <label>Коментар для оператора</label>
       <textarea id="fComment" rows="2" placeholder="Додаткові інструкції..."></textarea>
     </div>
-    <div class="form-group">
-      <label>Фото товару</label>
-      <input type="file" id="fPhoto" accept="image/*">
-    </div>
+
     <div class="modal-actions">
       <button class="btn btn-success" onclick="saveProduct()">💾 Зберегти</button>
+      <button id="clearCellBtn" class="btn btn-danger hidden" onclick="clearCell()">🗑️ Очистити комірку</button>
       <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
     </div>
   </div>
@@ -178,16 +230,28 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 <!-- Box Modal -->
 <div id="boxModal" class="modal-overlay hidden">
   <div class="modal">
-    <h3>Нова коробка</h3>
+    <h3 id="boxModalTitle">Нова коробка</h3>
+    <input type="hidden" id="bEditId">
     <div class="form-group">
-      <label>Назва (напр. А - 30×40×20)</label>
-      <input id="bName" placeholder="A - 30×40×20">
+      <label>Назва (напр. A - 30×20×15)</label>
+      <input id="bName" placeholder="A - 30×20×15">
+    </div>
+    <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри (см)</div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Довжина</label><input id="bLength" type="number" step="0.1"></div>
+      <div class="form-group"><label>Ширина</label> <input id="bWidth"  type="number" step="0.1"></div>
+      <div class="form-group"><label>Висота</label>  <input id="bHeight" type="number" step="0.1"></div>
     </div>
     <div class="form-row">
-      <div class="form-group"><label>Довжина (мм)</label><input id="bLength" type="number"></div>
-      <div class="form-group"><label>Ширина (мм)</label><input id="bWidth" type="number"></div>
+      <div class="form-group">
+        <label>Макс. заповненість (%)</label>
+        <input id="bFillPct" type="number" min="10" max="100" value="80">
+      </div>
+      <div class="form-group">
+        <label>Вага коробки (г)</label>
+        <input id="bWeight" type="number" step="1" value="0">
+      </div>
     </div>
-    <div class="form-group"><label>Висота (мм)</label><input id="bHeight" type="number"></div>
     <div class="modal-actions">
       <button class="btn btn-success" onclick="saveBox()">💾 Зберегти</button>
       <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
@@ -198,11 +262,14 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 <script>
 let products = [];
 let boxes = [];
+let currentProductId = null;  // для видалення фото
 
 async function init() {
   await loadProducts();
   await loadBoxes();
 }
+
+// ─── Товари ───────────────────────────────────────────────────────────────────
 
 async function loadProducts() {
   const r = await fetch('/api/products');
@@ -210,16 +277,9 @@ async function loadProducts() {
   renderCells();
 }
 
-async function loadBoxes() {
-  const r = await fetch('/api/boxes');
-  boxes = await r.json();
-  renderBoxes();
-}
-
 function renderCells() {
   const grid = document.getElementById('cellsGrid');
   const cells = [];
-  // 16 слотів
   for (let ch = 0; ch < 16; ch++) {
     const p = products.find(x => x.servo_channel === ch && x.servo_board === '0x40');
     cells.push(renderCell(ch, p));
@@ -238,147 +298,298 @@ function renderCell(ch, product) {
   const pct = product.cell_capacity > 0
     ? Math.round((product.cell_stock / product.cell_capacity) * 100) : 0;
   const cls = pct === 0 ? 'empty' : pct <= 25 ? 'low' : '';
+  const thumbHtml = product.photo
+    ? `<img src="${product.photo}" class="cell-thumb" onerror="this.style.display='none'">`
+    : '';
 
-  return `<div class="cell-card" onclick="openProductModal(${JSON.stringify(product).replace(/"/g, '&quot;')}, ${ch})">
+  return `<div class="cell-card" onclick="openProductModal(${JSON.stringify(product).replace(/"/g,'&quot;')}, ${ch})">
     <div class="cell-num">Канал ${ch}</div>
     <div class="cell-art">${product.articl}</div>
     <div class="cell-name">${product.name || '—'}</div>
     <div class="cell-stock">
       <div class="stock-bar"><div class="stock-fill ${cls}" style="width:${pct}%"></div></div>
-      <span class="stock-text ${cls === 'empty' ? 'stock-empty' : cls === 'low' ? 'stock-low' : ''}">${product.cell_stock}/${product.cell_capacity}</span>
+      <span class="stock-text ${cls}">${product.cell_stock}/${product.cell_capacity}</span>
     </div>
-    ${product.sticker_count > 0 ? '<div style="font-size:11px;color:#f59e0b;margin-top:4px">🏷️ Стікер</div>' : ''}
+    ${product.sticker_count > 0 ? '<div style="font-size:10px;color:#f59e0b;margin-top:3px">🏷️ Стікер</div>' : ''}
+    ${thumbHtml}
   </div>`;
 }
 
 function openProductModal(product, channel) {
+  currentProductId = product ? product.id : null;
+
   document.getElementById('modalTitle').textContent =
-    product ? `Редагувати — Канал ${channel}` : `Новий товар — Канал ${channel}`;
+    product ? `Канал ${channel} — ${product.articl}` : `Новий товар — Канал ${channel}`;
   document.getElementById('editId').value = product ? product.id : '';
   document.getElementById('editChannel').value = channel;
+
   document.getElementById('fArticl').value = product ? product.articl : '';
   document.getElementById('fName').value = product ? product.name : '';
   document.getElementById('fCapacity').value = product ? product.cell_capacity : 20;
   document.getElementById('fStock').value = product ? product.cell_stock : 0;
-  document.getElementById('fLength').value = product ? product.length : 0;
-  document.getElementById('fWidth').value = product ? product.width : 0;
-  document.getElementById('fHeight').value = product ? product.height : 0;
+  // Конвертуємо мм → см для відображення
+  document.getElementById('fLength').value = product ? (product.length / 10).toFixed(1) : 0;
+  document.getElementById('fWidth').value  = product ? (product.width  / 10).toFixed(1) : 0;
+  document.getElementById('fHeight').value = product ? (product.height / 10).toFixed(1) : 0;
   document.getElementById('fWeight').value = product ? product.weight : 0;
   document.getElementById('fStickerCount').value = product ? product.sticker_count : 0;
   document.getElementById('fStickerNote').value = product ? product.sticker_note : '';
   document.getElementById('fComment').value = product ? product.comment : '';
+  document.getElementById('artStatus').textContent = '';
+  document.getElementById('fPhoto').value = '';
 
-  const photoDiv = document.getElementById('photoPreview');
-  photoDiv.innerHTML = product && product.photo
-    ? `<img src="${product.photo}" class="product-photo">` : '';
+  // Photo preview
+  const prevDiv = document.getElementById('photoPreview');
+  const delBtn  = document.getElementById('photoDelBtn');
+  if (product && product.photo) {
+    prevDiv.innerHTML = `<img src="${product.photo}" class="photo-preview" onerror="this.style.display='none'">`;
+    delBtn.classList.remove('hidden');
+  } else {
+    prevDiv.innerHTML = '<span style="font-size:30px">📦</span>';
+    prevDiv.className = 'photo-placeholder';
+    delBtn.classList.add('hidden');
+  }
 
+  document.getElementById('clearCellBtn').classList.toggle('hidden', !product);
   document.getElementById('productModal').classList.remove('hidden');
+}
+
+// Пошук артикулу в базі при виході з поля
+async function lookupArticl() {
+  const val = document.getElementById('fArticl').value.trim();
+  const status = document.getElementById('artStatus');
+  if (!val) { status.textContent = ''; return; }
+
+  // Не перезаписуємо дані якщо вже є id (редагуємо існуючий)
+  const existingId = document.getElementById('editId').value;
+
+  const r = await fetch(`/api/products/by_articl?q=${encodeURIComponent(val)}`);
+  if (r.ok) {
+    const p = await r.json();
+    // Якщо це інший товар (інший id), попередити
+    if (existingId && String(p.id) !== existingId) {
+      status.innerHTML = `<span style="color:var(--danger)">⚠️ Артикул вже зайнятий іншою коміркою (канал ${p.servo_channel})</span>`;
+      return;
+    }
+    if (!existingId) {
+      // Автозаповнення для нового товару
+      document.getElementById('fName').value = p.name || '';
+      document.getElementById('fCapacity').value = p.cell_capacity;
+      document.getElementById('fStock').value = p.cell_stock;
+      document.getElementById('fLength').value = (p.length / 10).toFixed(1);
+      document.getElementById('fWidth').value  = (p.width  / 10).toFixed(1);
+      document.getElementById('fHeight').value = (p.height / 10).toFixed(1);
+      document.getElementById('fWeight').value = p.weight;
+      document.getElementById('fStickerCount').value = p.sticker_count;
+      document.getElementById('fStickerNote').value = p.sticker_note;
+      document.getElementById('fComment').value = p.comment;
+    }
+    status.innerHTML = `<span class="articl-found">✅ Знайдено в базі</span>`;
+  } else {
+    status.innerHTML = `<span class="articl-new">✨ Новий артикул — заповніть дані</span>`;
+  }
+}
+
+function previewPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const prevDiv = document.getElementById('photoPreview');
+    prevDiv.innerHTML = `<img src="${e.target.result}" class="photo-preview">`;
+    prevDiv.className = 'photo-area';
+    document.getElementById('photoDelBtn').classList.remove('hidden');
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function deletePhoto() {
+  if (!currentProductId) {
+    // Просто очищаємо превью (товар ще не збережений)
+    document.getElementById('fPhoto').value = '';
+    document.getElementById('photoPreview').innerHTML = '<span style="font-size:30px">📦</span>';
+    document.getElementById('photoPreview').className = 'photo-placeholder';
+    document.getElementById('photoDelBtn').classList.add('hidden');
+    return;
+  }
+  if (!confirm('Видалити фото товару?')) return;
+  await fetch(`/api/products/${currentProductId}/photo`, { method: 'DELETE' });
+  document.getElementById('photoPreview').innerHTML = '<span style="font-size:30px">📦</span>';
+  document.getElementById('photoPreview').className = 'photo-placeholder';
+  document.getElementById('photoDelBtn').classList.add('hidden');
+  await loadProducts();
 }
 
 async function saveProduct() {
   const id = document.getElementById('editId').value;
   const channel = parseInt(document.getElementById('editChannel').value);
+  const articl = document.getElementById('fArticl').value.trim();
+  if (!articl) { alert('Введіть артикул'); return; }
+
   const data = {
-    articl: document.getElementById('fArticl').value.trim(),
+    articl,
     name: document.getElementById('fName').value.trim(),
     servo_board: 0x40,
     servo_channel: channel,
-    cell_capacity: document.getElementById('fCapacity').value,
-    cell_stock: document.getElementById('fStock').value,
-    length: document.getElementById('fLength').value,
-    width: document.getElementById('fWidth').value,
-    height: document.getElementById('fHeight').value,
-    weight: document.getElementById('fWeight').value,
-    sticker_count: document.getElementById('fStickerCount').value,
-    sticker_note: document.getElementById('fStickerNote').value,
-    comment: document.getElementById('fComment').value,
+    cell_capacity: parseInt(document.getElementById('fCapacity').value) || 10,
+    cell_stock:    parseInt(document.getElementById('fStock').value)    || 0,
+    // Конвертуємо см → мм для збереження
+    length: parseFloat(document.getElementById('fLength').value) * 10 || 0,
+    width:  parseFloat(document.getElementById('fWidth').value)  * 10 || 0,
+    height: parseFloat(document.getElementById('fHeight').value) * 10 || 0,
+    weight: parseFloat(document.getElementById('fWeight').value) || 0,
+    sticker_count: parseInt(document.getElementById('fStickerCount').value) || 0,
+    sticker_note:  document.getElementById('fStickerNote').value,
+    comment:       document.getElementById('fComment').value,
   };
-
-  if (!data.articl) { alert('Введіть артикул'); return; }
 
   let savedId = id;
   if (id) {
-    await fetch(`/api/products/${id}`, {
-      method: 'PUT', headers: {'Content-Type':'application/json'},
+    const r = await fetch(`/api/products/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
+    if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка збереження'); return; }
   } else {
     const r = await fetch('/api/products', {
-      method: 'POST', headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
     if (!r.ok) { const e = await r.json(); alert(e.error); return; }
-    const created = await r.json();
-    savedId = created.id;
+    savedId = (await r.json()).id;
   }
 
-  // Upload photo if selected
   const photoFile = document.getElementById('fPhoto').files[0];
   if (photoFile && savedId) {
     const fd = new FormData();
     fd.append('photo', photoFile);
-    await fetch(`/api/products/${savedId}/photo`, {method:'POST', body: fd});
+    await fetch(`/api/products/${savedId}/photo`, { method: 'POST', body: fd });
   }
 
   closeModal();
   await loadProducts();
 }
 
-function openBoxModal() {
-  document.getElementById('boxModal').classList.remove('hidden');
-}
-
-async function saveBox() {
-  const data = {
-    name: document.getElementById('bName').value.trim(),
-    length: document.getElementById('bLength').value,
-    width: document.getElementById('bWidth').value,
-    height: document.getElementById('bHeight').value,
-  };
-  if (!data.name) { alert('Введіть назву'); return; }
-  await fetch('/api/boxes', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify(data)
-  });
+async function clearCell() {
+  const id = document.getElementById('editId').value;
+  if (!id) return;
+  if (!confirm('Очистити комірку? Товар буде видалено з системи.')) return;
+  await fetch(`/api/products/${id}`, { method: 'DELETE' });
   closeModal();
-  await loadBoxes();
-}
-
-function renderBoxes() {
-  const list = document.getElementById('boxList');
-  if (!boxes.length) {
-    list.innerHTML = '<div style="color:#6b7280;padding:20px;text-align:center">Немає коробок</div>';
-    return;
-  }
-  list.innerHTML = boxes.map(b => `
-    <div class="box-row">
-      <div>
-        <div class="box-name">${b.name}</div>
-        <div class="box-dims">${b.length}×${b.width}×${b.height} мм</div>
-      </div>
-    </div>
-  `).join('');
+  await loadProducts();
 }
 
 async function initProducts() {
-  const r = await fetch('/api/products/init_16', {method:'POST'});
+  const r = await fetch('/api/products/init_16', { method: 'POST' });
   const d = await r.json();
   alert(`Ініціалізовано ${d.added} товарів`);
   await loadProducts();
 }
 
+// ─── Коробки ──────────────────────────────────────────────────────────────────
+
+async function loadBoxes() {
+  const r = await fetch('/api/boxes');
+  boxes = await r.json();
+  renderBoxes();
+}
+
+function renderBoxes() {
+  const grid = document.getElementById('boxGrid');
+  if (!boxes.length) {
+    grid.innerHTML = '<div style="color:#6b7280;padding:20px;text-align:center">Немає коробок. Додайте або ініціалізуйте стандартні.</div>';
+    return;
+  }
+  grid.innerHTML = boxes.map(b => renderBoxCard(b)).join('');
+}
+
+function renderBoxCard(b) {
+  const lCm = (b.length / 10).toFixed(0);
+  const wCm = (b.width  / 10).toFixed(0);
+  const hCm = (b.height / 10).toFixed(0);
+  const fill = b.max_fill_pct || 80;
+  const wt   = b.weight || 0;
+  return `<div class="box-card">
+    <div class="box-card-header">
+      <div class="box-card-name">${b.name}</div>
+      <div class="box-card-actions">
+        <button class="btn btn-outline btn-sm" onclick="openBoxModal(${JSON.stringify(b).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteBox(${b.id}, '${b.name}')"
+          style="color:var(--danger)">🗑️</button>
+      </div>
+    </div>
+    <div class="box-dims-grid">
+      <div><div class="box-dim-label">Довжина</div><div class="box-dim-val">${lCm} см</div></div>
+      <div><div class="box-dim-label">Ширина</div> <div class="box-dim-val">${wCm} см</div></div>
+      <div><div class="box-dim-label">Висота</div>  <div class="box-dim-val">${hCm} см</div></div>
+      <div><div class="box-dim-label">Макс. заповн.</div><div class="box-dim-val">${fill}%</div></div>
+      ${wt ? `<div><div class="box-dim-label">Вага</div><div class="box-dim-val">${wt} г</div></div>` : ''}
+    </div>
+  </div>`;
+}
+
+function openBoxModal(box) {
+  document.getElementById('boxModalTitle').textContent = box ? 'Редагувати коробку' : 'Нова коробка';
+  document.getElementById('bEditId').value  = box ? box.id : '';
+  document.getElementById('bName').value    = box ? box.name : '';
+  // мм → см
+  document.getElementById('bLength').value  = box ? (box.length / 10).toFixed(1) : '';
+  document.getElementById('bWidth').value   = box ? (box.width  / 10).toFixed(1) : '';
+  document.getElementById('bHeight').value  = box ? (box.height / 10).toFixed(1) : '';
+  document.getElementById('bFillPct').value = box ? (box.max_fill_pct || 80) : 80;
+  document.getElementById('bWeight').value  = box ? (box.weight || 0) : 0;
+  document.getElementById('boxModal').classList.remove('hidden');
+}
+
+async function saveBox() {
+  const id = document.getElementById('bEditId').value;
+  const name = document.getElementById('bName').value.trim();
+  if (!name) { alert('Введіть назву'); return; }
+
+  const data = {
+    name,
+    // см → мм для збереження
+    length:       parseFloat(document.getElementById('bLength').value)  * 10 || 0,
+    width:        parseFloat(document.getElementById('bWidth').value)   * 10 || 0,
+    height:       parseFloat(document.getElementById('bHeight').value)  * 10 || 0,
+    max_fill_pct: parseFloat(document.getElementById('bFillPct').value) || 80,
+    weight:       parseFloat(document.getElementById('bWeight').value)  || 0,
+  };
+
+  if (id) {
+    await fetch(`/api/boxes/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  } else {
+    await fetch('/api/boxes', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  }
+  closeModal();
+  await loadBoxes();
+}
+
+async function deleteBox(id, name) {
+  if (!confirm(`Видалити коробку «${name}»?`)) return;
+  await fetch(`/api/boxes/${id}`, { method: 'DELETE' });
+  await loadBoxes();
+}
+
 async function initBoxes() {
-  const r = await fetch('/api/boxes/init', {method:'POST'});
+  const r = await fetch('/api/boxes/init', { method: 'POST' });
   const d = await r.json();
   alert(`Додано ${d.added} коробок`);
   await loadBoxes();
 }
 
-function showTab(name) {
+// ─── Утиліти ──────────────────────────────────────────────────────────────────
+
+function showTab(name, event) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`tab-${name}`).classList.add('active');
-  event.target.classList.add('active');
+  if (event && event.target) event.target.classList.add('active');
 }
 
 function closeModal() {

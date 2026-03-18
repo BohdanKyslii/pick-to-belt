@@ -2,3 +2,4 @@ flask>=3.0
 flask-sqlalchemy>=3.1
 smbus2>=0.4.3
 werkzeug>=3.0
+openpyxl>=3.1

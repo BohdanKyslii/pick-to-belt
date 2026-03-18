@@ -24,8 +24,24 @@ def create_app():
     from .routes import bp
     app.register_blueprint(bp)
 
-    # Create tables
+    # Create tables + run migrations for new columns
     with app.app_context():
         db.create_all()
+        _run_migrations()
 
     return app
+
+
+def _run_migrations():
+    """Додає нові колонки до існуючих таблиць (безпечно, якщо вже є)."""
+    from sqlalchemy import text
+    migrations = [
+        "ALTER TABLE boxes ADD COLUMN max_fill_pct FLOAT DEFAULT 80.0",
+        "ALTER TABLE boxes ADD COLUMN weight FLOAT DEFAULT 0.0",
+    ]
+    for sql in migrations:
+        try:
+            db.session.execute(text(sql))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()

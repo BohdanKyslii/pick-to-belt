@@ -1,9 +1,10 @@
+import io
 import json
 import os
 import threading
 from datetime import datetime, timedelta
 
-from flask import Blueprint, jsonify, request, current_app, send_from_directory
+from flask import Blueprint, jsonify, request, current_app, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 
 from .models import db, Product, Box, Order, OrderItem, StockLog
@@ -38,23 +39,35 @@ def report_page():
     return render_template("report.html")
 
 
-# ─── API: Замовлення ──────────────────────────────────────────────────────────
+# ─── API: Статус ──────────────────────────────────────────────────────────────
+
 @bp.route("/api/status")
 def get_status():
-    from . import servo_controller as servo
     return jsonify({
         "simulation": servo.is_simulation(),
         "i2c_available": not servo.is_simulation()
     })
 
+
+# ─── API: Замовлення ──────────────────────────────────────────────────────────
+
 @bp.route("/api/orders")
 def get_orders():
-    # Тільки одне активне замовлення (picking) або список pending
+    """Активні замовлення: одне picking або до 5 pending."""
     picking = Order.query.filter_by(status="picking").first()
     if picking:
         return jsonify([picking.to_dict()])
-    orders = Order.query.filter_by(status="pending")\
+    orders = Order.query.filter_by(status="pending") \
         .order_by(Order.created_at).limit(5).all()
+    return jsonify([o.to_dict() for o in orders])
+
+
+@bp.route("/api/orders/completed")
+def get_completed_orders():
+    """Виконані замовлення (packed/done), останні 50."""
+    orders = Order.query.filter(
+        Order.status.in_(["packed", "done"])
+    ).order_by(Order.packed_at.desc(), Order.started_at.desc()).limit(50).all()
     return jsonify([o.to_dict() for o in orders])
 
 
@@ -102,7 +115,6 @@ def start_order(order_id):
     order.started_at = datetime.utcnow()
     db.session.commit()
 
-    # Передаємо app в потік
     app = current_app._get_current_object()
     thread = threading.Thread(target=_pick_order, args=(app, order.id))
     thread.daemon = True
@@ -142,14 +154,12 @@ def _pick_order(app, order_db_id: int):
             servo.release_multiple(product.servo_board, product.servo_channel, pick_count)
 
             product.cell_stock -= pick_count
-
             log = StockLog(
                 articl=item.articl,
                 order_id=order.order_id,
                 quantity=pick_count,
             )
             db.session.add(log)
-
             item.quantity_picked = pick_count
             item.status = "partial" if manual_count > 0 else "done"
             db.session.commit()
@@ -157,7 +167,6 @@ def _pick_order(app, order_db_id: int):
 
 @bp.route("/api/orders/<int:order_id>/confirm_manual", methods=["POST"])
 def confirm_manual(order_id):
-    """Оператор підтвердив що вручну доклав товар."""
     order = Order.query.get_or_404(order_id)
     data = request.get_json() or {}
     item_id = data.get("item_id")
@@ -173,7 +182,6 @@ def confirm_manual(order_id):
 
 @bp.route("/api/orders/<int:order_id>/packed", methods=["POST"])
 def pack_order(order_id):
-    """Оператор запакував замовлення."""
     order = Order.query.get_or_404(order_id)
     order.status = "packed"
     order.packed_at = datetime.utcnow()
@@ -191,19 +199,20 @@ def done_order(order_id):
 
 @bp.route("/api/orders/<int:order_id>/cancel", methods=["POST"])
 def cancel_order(order_id):
-    """Оператор перервав комплектацію."""
     order = Order.query.get_or_404(order_id)
-    data = request.get_json() or {}
-
-    # Зберігаємо скільки вже подали
-    note = f"Скасовано оператором. Подано: " + ", ".join(
-        f"{i.articl}:{i.quantity_picked}"
-        for i in order.items if i.quantity_picked > 0
-    )
     order.status = "cancelled"
     order.packed_at = datetime.utcnow()
     db.session.commit()
-    return jsonify({"ok": True, "note": note})
+    return jsonify({"ok": True})
+
+
+@bp.route("/api/orders/<int:order_id>", methods=["DELETE"])
+def delete_order(order_id):
+    """Видалити замовлення."""
+    order = Order.query.get_or_404(order_id)
+    db.session.delete(order)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 # ─── API: Товари ──────────────────────────────────────────────────────────────
@@ -214,10 +223,21 @@ def get_products():
     return jsonify([p.to_dict() for p in products])
 
 
+@bp.route("/api/products/by_articl")
+def get_product_by_articl():
+    """Пошук товару за артикулом (для автозаповнення форми)."""
+    articl = request.args.get("q", "").strip()
+    if not articl:
+        return jsonify({"error": "Порожній артикул"}), 400
+    p = Product.query.filter_by(articl=articl).first()
+    if p:
+        return jsonify(p.to_dict())
+    return jsonify({"error": "not found"}), 404
+
+
 @bp.route("/api/products", methods=["POST"])
 def create_product():
     data = request.get_json()
-    # Перевіряємо чи канал вже зайнятий
     existing = Product.query.filter_by(
         servo_board=int(data.get("servo_board", 0x40)),
         servo_channel=int(data["servo_channel"])
@@ -249,7 +269,7 @@ def create_product():
 def update_product(product_id):
     p = Product.query.get_or_404(product_id)
     data = request.get_json()
-    for field in ["name", "length", "width", "height", "weight",
+    for field in ["name", "articl", "length", "width", "height", "weight",
                   "cell_capacity", "cell_stock", "sticker_count",
                   "sticker_note", "comment", "servo_channel", "is_active"]:
         if field in data:
@@ -262,6 +282,15 @@ def update_product(product_id):
     p.updated_at = datetime.utcnow()
     db.session.commit()
     return jsonify(p.to_dict())
+
+
+@bp.route("/api/products/<int:product_id>", methods=["DELETE"])
+def delete_product(product_id):
+    """Очистити комірку — видалити товар."""
+    p = Product.query.get_or_404(product_id)
+    db.session.delete(p)
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 @bp.route("/api/products/<int:product_id>/photo", methods=["POST"])
@@ -281,9 +310,23 @@ def upload_photo(product_id):
     return jsonify({"error": "Невірний формат файлу"}), 400
 
 
+@bp.route("/api/products/<int:product_id>/photo", methods=["DELETE"])
+def delete_photo(product_id):
+    """Видалити фото товару."""
+    p = Product.query.get_or_404(product_id)
+    if p.photo:
+        upload_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static", "uploads")
+        filename = p.photo.replace("/static/uploads/", "")
+        filepath = os.path.join(upload_folder, filename)
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        p.photo = ""
+        db.session.commit()
+    return jsonify({"ok": True})
+
+
 @bp.route("/api/products/init_16", methods=["POST"])
 def init_16_products():
-    """Ініціалізувати 16 порожніх слотів для тесту."""
     articles = [
         "20980", "21411", "22719", "30769", "30770",
         "36401", "36403", "36405", "41276", "41278",
@@ -323,10 +366,32 @@ def create_box():
         length=float(data["length"]),
         width=float(data["width"]),
         height=float(data["height"]),
+        max_fill_pct=float(data.get("max_fill_pct", 80)),
+        weight=float(data.get("weight", 0)),
     )
     db.session.add(b)
     db.session.commit()
     return jsonify(b.to_dict()), 201
+
+
+@bp.route("/api/boxes/<int:box_id>", methods=["PUT"])
+def update_box(box_id):
+    b = Box.query.get_or_404(box_id)
+    data = request.get_json()
+    for field in ["name", "length", "width", "height", "max_fill_pct", "weight"]:
+        if field in data:
+            val = float(data[field]) if field != "name" else data[field]
+            setattr(b, field, val)
+    db.session.commit()
+    return jsonify(b.to_dict())
+
+
+@bp.route("/api/boxes/<int:box_id>", methods=["DELETE"])
+def delete_box(box_id):
+    b = Box.query.get_or_404(box_id)
+    b.is_active = False
+    db.session.commit()
+    return jsonify({"ok": True})
 
 
 @bp.route("/api/boxes/init", methods=["POST"])
@@ -354,26 +419,23 @@ def get_report():
     days = int(request.args.get("days", 7))
     since = datetime.utcnow() - timedelta(days=days)
 
+    # Фільтруємо по даті початку комплектації (started_at)
     orders = Order.query.filter(
-        Order.created_at >= since,
+        Order.started_at >= since,
         Order.status.in_(["packed", "done"])
     ).all()
 
     total_orders = len(orders)
     total_items = sum(len(o.items) for o in orders)
-    total_picked = sum(
-        i.quantity_picked for o in orders for i in o.items
-    )
-    manual_items = sum(
-        1 for o in orders for i in o.items if i.is_manual
-    )
+    total_picked = sum(i.quantity_picked for o in orders for i in o.items)
+    manual_items = sum(1 for o in orders for i in o.items if i.is_manual)
 
-    # По артикулах
     by_articl = {}
     for o in orders:
         for i in o.items:
+            d = i.to_dict()
             if i.articl not in by_articl:
-                by_articl[i.articl] = {"articl": i.articl, "name": i.name, "count": 0}
+                by_articl[i.articl] = {"articl": i.articl, "name": d["name"], "count": 0}
             by_articl[i.articl]["count"] += i.quantity_picked
 
     top_products = sorted(by_articl.values(), key=lambda x: x["count"], reverse=True)[:10]
@@ -386,6 +448,71 @@ def get_report():
         "manual_items": manual_items,
         "top_products": top_products,
     })
+
+
+@bp.route("/api/report/export")
+def export_report():
+    """Вивантажити звіт у форматі Excel."""
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment
+    except ImportError:
+        return jsonify({"error": "openpyxl не встановлений"}), 500
+
+    days = int(request.args.get("days", 7))
+    since = datetime.utcnow() - timedelta(days=days)
+
+    orders = Order.query.filter(
+        Order.started_at >= since,
+        Order.status.in_(["packed", "done"])
+    ).order_by(Order.started_at).all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Звіт"
+
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill("solid", fgColor="2563EB")
+    headers = ["Замовлення", "Статус", "Дата комплектації", "Коробка",
+               "Артикул", "Назва товару", "Замовлено", "Зібрано серво", "Вручну"]
+    ws.append(headers)
+    for col_idx in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    for order in orders:
+        date_str = order.started_at.strftime("%d.%m.%Y %H:%M") if order.started_at else ""
+        box_name = order.box.name if order.box else ""
+        for item in order.items:
+            d = item.to_dict()
+            ws.append([
+                order.order_id,
+                order.status,
+                date_str,
+                box_name,
+                item.articl,
+                d.get("name", ""),
+                item.quantity_ordered,
+                item.quantity_picked,
+                1 if item.is_manual else 0,
+            ])
+
+    for col in ws.columns:
+        max_len = max((len(str(cell.value or "")) for cell in col), default=0)
+        ws.column_dimensions[col[0].column_letter].width = min(max_len + 4, 40)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"pick_to_belt_report_{days}d.xlsx"
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 
 
 # ─── Статика ──────────────────────────────────────────────────────────────────

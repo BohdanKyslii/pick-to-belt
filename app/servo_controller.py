@@ -73,6 +73,24 @@ def _set_pwm(board_addr: int, channel: int, angle: float):
         logger.error(f"PWM write error: {e}")
 
 
+def _disable_channel(board_addr: int, channel: int):
+    """Повністю вимкнути PWM-сигнал на каналі (FULL_OFF bit).
+    Запобігає жужжанню сервопривода після завершення руху.
+    """
+    bus = _get_bus()
+    if _simulation_mode or bus is None:
+        logger.info(f"[SIM] disable ch={channel}")
+        return
+    reg = 0x06 + 4 * channel
+    try:
+        bus.write_byte_data(board_addr, reg, 0x00)      # ON_L
+        bus.write_byte_data(board_addr, reg + 1, 0x00)  # ON_H
+        bus.write_byte_data(board_addr, reg + 2, 0x00)  # OFF_L
+        bus.write_byte_data(board_addr, reg + 3, 0x10)  # OFF_H — FULL_OFF bit
+    except Exception as e:
+        logger.error(f"disable_channel error: {e}")
+
+
 def release_one(board_addr: int, channel: int) -> bool:
     _ensure_board(board_addr)
     try:
@@ -80,6 +98,7 @@ def release_one(board_addr: int, channel: int) -> bool:
         time.sleep(HOLD_TIME)
         _set_pwm(board_addr, channel, CLOSE_ANGLE)
         time.sleep(0.3)
+        _disable_channel(board_addr, channel)  # вимкнути сигнал — серво не жужжить
         return True
     except Exception as e:
         logger.error(f"release_one error: {e}")

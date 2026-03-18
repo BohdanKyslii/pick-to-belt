@@ -13,17 +13,17 @@ class Product(db.Model):
     name = db.Column(db.String(200), nullable=False, default="")
     servo_board = db.Column(db.Integer, default=0x40)   # адреса плати PCA9685
     servo_channel = db.Column(db.Integer, nullable=False)  # канал 0-15
-    # Фізичні параметри товару
-    length = db.Column(db.Float, default=0)   # мм
+    # Фізичні параметри товару (мм — зберігаємо в мм, UI відображає в см)
+    length = db.Column(db.Float, default=0)
     width = db.Column(db.Float, default=0)
     height = db.Column(db.Float, default=0)
     weight = db.Column(db.Float, default=0)   # г
     # Параметри комірки
-    cell_capacity = db.Column(db.Integer, default=10)   # макс кількість на полиці
-    cell_stock = db.Column(db.Integer, default=0)       # поточний залишок
+    cell_capacity = db.Column(db.Integer, default=10)
+    cell_stock = db.Column(db.Integer, default=0)
     # Додаткові параметри
     photo = db.Column(db.String(300), default="")
-    sticker_count = db.Column(db.Integer, default=0)    # кількість стікерів (0 = не потрібно)
+    sticker_count = db.Column(db.Integer, default=0)
     sticker_note = db.Column(db.String(300), default="")
     comment = db.Column(db.Text, default="")
     is_active = db.Column(db.Boolean, default=True)
@@ -56,10 +56,12 @@ class Box(db.Model):
     __tablename__ = "boxes"
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False)   # напр. "А - 30×40×20"
-    length = db.Column(db.Float, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    length = db.Column(db.Float, nullable=False)   # мм
     width = db.Column(db.Float, nullable=False)
     height = db.Column(db.Float, nullable=False)
+    max_fill_pct = db.Column(db.Float, default=80.0)   # % макс. заповненості
+    weight = db.Column(db.Float, default=0.0)           # вага порожньої коробки, г
     is_active = db.Column(db.Boolean, default=True)
 
     def to_dict(self):
@@ -69,6 +71,8 @@ class Box(db.Model):
             "length": self.length,
             "width": self.width,
             "height": self.height,
+            "max_fill_pct": self.max_fill_pct if self.max_fill_pct is not None else 80.0,
+            "weight": self.weight if self.weight is not None else 0.0,
         }
 
 
@@ -110,9 +114,8 @@ class OrderItem(db.Model):
     articl = db.Column(db.String(50), nullable=False)
     quantity_ordered = db.Column(db.Integer, nullable=False)
     quantity_picked = db.Column(db.Integer, default=0)
-    is_manual = db.Column(db.Boolean, default=False)  # True якщо товар не в системі
+    is_manual = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(20), default="pending")
-    # pending → picking → done → manual
 
     def to_dict(self):
         product = Product.query.filter_by(articl=self.articl).first()
@@ -120,12 +123,17 @@ class OrderItem(db.Model):
             "id": self.id,
             "articl": self.articl,
             "name": product.name if product else "Невідомий товар",
+            "product_id": product.id if product else None,
             "quantity_ordered": self.quantity_ordered,
             "quantity_picked": self.quantity_picked,
             "is_manual": self.is_manual,
             "status": self.status,
             "has_servo": product is not None,
             "cell_stock": product.cell_stock if product else 0,
+            "cell_capacity": product.cell_capacity if product else 0,
+            "length": product.length if product else 0,
+            "width": product.width if product else 0,
+            "height": product.height if product else 0,
             "sticker_count": product.sticker_count if product else 0,
             "sticker_note": product.sticker_note if product else "",
             "comment": product.comment if product else "",

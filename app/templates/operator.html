@@ -6,21 +6,14 @@
 <title>Pick-to-Belt | Оператор</title>
 <style>
 :root {
-  --primary: #2563eb;
-  --success: #16a34a;
-  --warning: #d97706;
-  --danger: #dc2626;
-  --gray: #6b7280;
-  --light: #f3f4f6;
-  --white: #ffffff;
-  --radius: 12px;
-  --shadow: 0 2px 8px rgba(0,0,0,.12);
+  --primary: #2563eb; --success: #16a34a; --warning: #d97706;
+  --danger: #dc2626; --gray: #6b7280; --light: #f3f4f6;
+  --white: #ffffff; --radius: 12px; --shadow: 0 2px 8px rgba(0,0,0,.12);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
        background: #f0f4f8; min-height: 100vh; }
 
-/* Header */
 .header { background: var(--primary); color: #fff; padding: 12px 16px;
           display: flex; align-items: center; justify-content: space-between;
           position: sticky; top: 0; z-index: 100; box-shadow: var(--shadow); }
@@ -29,98 +22,146 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                   font-size: 13px; margin-left: 12px; }
 .sim-badge { background: #f59e0b; color: #000; padding: 2px 8px;
              border-radius: 20px; font-size: 11px; font-weight: 700; }
+.hidden { display: none !important; }
 
-/* Actions bar */
 .actions-bar { padding: 12px 16px; display: flex; gap: 8px; flex-wrap: wrap;
                background: #fff; border-bottom: 1px solid #e5e7eb; }
 .btn { padding: 8px 16px; border-radius: 8px; border: none; cursor: pointer;
        font-size: 14px; font-weight: 600; transition: .15s; }
-.btn-primary { background: var(--primary); color: #fff; }
-.btn-primary:hover { background: #1d4ed8; }
-.btn-success { background: var(--success); color: #fff; }
-.btn-success:hover { background: #15803d; }
-.btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
-.btn-outline:hover { background: #eff6ff; }
+.btn-primary  { background: var(--primary); color: #fff; }
+.btn-primary:hover  { background: #1d4ed8; }
+.btn-success  { background: var(--success); color: #fff; }
+.btn-success:hover  { background: #15803d; }
+.btn-warning  { background: #f59e0b; color: #000; }
+.btn-warning:hover  { background: #d97706; }
+.btn-danger   { background: var(--danger); color: #fff; }
+.btn-danger:hover   { background: #b91c1c; }
+.btn-outline  { background: #fff; color: var(--primary); border: 1.5px solid var(--primary); }
+.btn-outline:hover  { background: #eff6ff; }
+.btn-ghost    { background: transparent; color: var(--gray); border: none; padding: 4px 8px; font-size: 13px; }
 .btn-sm { padding: 6px 12px; font-size: 13px; }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
 
-/* Orders list */
 .orders-list { padding: 12px 16px; }
-.order-card { background: var(--white); border-radius: var(--radius);
-              box-shadow: var(--shadow); margin-bottom: 12px;
-              border: 2px solid transparent; transition: .2s; }
-.order-card.active { border-color: var(--primary); }
-.order-card.packed { border-color: var(--success); opacity: .7; }
+.section-label { font-size: 13px; font-weight: 700; color: var(--gray);
+                 text-transform: uppercase; letter-spacing: .05em;
+                 margin: 16px 0 8px; display: flex; align-items: center; gap: 8px; }
+.section-label hr { flex: 1; border: none; border-top: 1px solid #e5e7eb; }
 
-.order-header { padding: 14px 16px; display: flex; align-items: center;
-                justify-content: space-between; cursor: pointer;
-                border-radius: var(--radius); }
+.order-card { background: var(--white); border-radius: var(--radius);
+              box-shadow: var(--shadow); margin-bottom: 10px;
+              border: 2px solid transparent; transition: .2s; }
+.order-card.picking { border-color: var(--primary); }
+.order-card.packed  { border-color: var(--success); opacity: .75; }
+.order-card.done    { opacity: .6; }
+
+.order-header { padding: 12px 16px; display: flex; align-items: center;
+                justify-content: space-between; border-radius: var(--radius); }
+.order-header-left { cursor: pointer; flex: 1; min-width: 0; }
 .order-title { font-size: 16px; font-weight: 700; }
-.order-meta { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.order-meta  { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.order-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
 .badge-pending  { background: #fef3c7; color: #92400e; }
 .badge-picking  { background: #dbeafe; color: #1e40af; }
 .badge-packed   { background: #d1fae5; color: #065f46; }
+.badge-done     { background: #f3f4f6; color: #374151; }
 
 .order-body { padding: 0 16px 16px; }
 
-/* Box selector */
-.box-selector { margin-bottom: 12px; }
+.box-recommend { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+                 padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+.box-recommend strong { color: var(--primary); }
 .box-selector label { font-size: 13px; color: var(--gray); display: block; margin-bottom: 4px; }
 .box-selector select { width: 100%; padding: 8px 12px; border-radius: 8px;
-                        border: 1.5px solid #d1d5db; font-size: 15px; }
+                        border: 1.5px solid #d1d5db; font-size: 15px; margin-bottom: 10px; }
 
-/* Items list */
-.item-row { display: flex; align-items: flex-start; padding: 10px 0;
-            border-bottom: 1px solid #f3f4f6; gap: 10px; }
-.item-row:last-child { border-bottom: none; }
-.item-photo { width: 52px; height: 52px; border-radius: 8px; object-fit: cover;
-              background: #f3f4f6; flex-shrink: 0; }
-.item-photo-placeholder { width: 52px; height: 52px; border-radius: 8px;
-                           background: #e5e7eb; display: flex; align-items: center;
-                           justify-content: center; font-size: 20px; flex-shrink: 0; }
-.item-info { flex: 1; min-width: 0; }
-.item-name { font-size: 15px; font-weight: 600; }
-.item-art  { font-size: 12px; color: var(--gray); }
-.item-qty  { font-size: 14px; margin-top: 4px; }
-.item-qty .picked { color: var(--success); font-weight: 700; }
-.item-qty .need   { color: var(--danger); font-weight: 700; }
+/* Items table */
+.items-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.items-table th { text-align: left; padding: 6px 8px; font-size: 11px;
+                   color: var(--gray); border-bottom: 2px solid #e5e7eb; font-weight: 600; }
+.items-table td { padding: 8px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.items-table tr:last-child td { border-bottom: none; }
+.items-table tr.clickable { cursor: pointer; }
+.items-table tr.clickable:hover td { background: #f9fafb; }
 
-/* Alerts */
-.alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+.item-thumb { width: 40px; height: 40px; border-radius: 6px; object-fit: cover;
+              background: #f3f4f6; display: block; }
+.item-thumb-ph { width: 40px; height: 40px; border-radius: 6px; background: #e5e7eb;
+                  display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.item-name-cell .name { font-weight: 600; font-size: 13px; }
+.item-name-cell .art  { font-size: 11px; color: var(--gray); }
+
+.qty-col  { font-weight: 700; text-align: center; width: 50px; }
+.stock-col { text-align: center; width: 80px; white-space: nowrap; }
+.stock-ok   { color: var(--success); font-weight: 600; }
+.stock-low  { color: var(--warning);  font-weight: 700; }
+.stock-zero { color: var(--danger);   font-weight: 700; }
+.stock-none { color: var(--gray); font-size: 11px; }
+.status-col { width: 90px; text-align: center; }
+
+.item-status-done    { color: var(--success); font-size: 18px; }
+.item-status-manual  { color: var(--warning); font-size: 18px; }
+.item-status-partial { color: #f59e0b; font-size: 18px; }
+.item-status-pending { color: var(--gray); font-size: 18px; }
+
+.alert { padding: 10px 14px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; }
 .alert-warning { background: #fef3c7; border-left: 4px solid #f59e0b; color: #78350f; }
 .alert-danger  { background: #fee2e2; border-left: 4px solid var(--danger); color: #7f1d1d; }
 .alert-info    { background: #dbeafe; border-left: 4px solid var(--primary); color: #1e3a8a; }
 .alert-success { background: #d1fae5; border-left: 4px solid var(--success); color: #064e3b; }
 
+/* Action buttons area */
+.action-area { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.action-row  { display: flex; gap: 8px; }
+
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5);
                  z-index: 200; display: flex; align-items: center; justify-content: center;
-                 padding: 16px; }
-.modal-overlay.hidden { display: none; }
+                 padding: 16px; overflow-y: auto; }
+.modal-overlay.hidden { display: none !important; }
 .modal { background: #fff; border-radius: var(--radius); padding: 20px;
-         width: 100%; max-width: 400px; }
-.modal h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-.modal p  { font-size: 15px; color: #374151; margin-bottom: 16px; }
-.modal-actions { display: flex; gap: 10px; }
+         width: 100%; max-width: 440px; max-height: 90vh; overflow-y: auto; }
+.modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 12px; }
+.modal p  { font-size: 14px; color: #374151; margin-bottom: 14px; line-height: 1.5; }
+.modal-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
 
-/* Stock warning */
-.stock-low    { color: var(--warning); font-weight: 700; }
-.stock-empty  { color: var(--danger);  font-weight: 700; }
-.sticker-note { background: #fef3c7; padding: 4px 8px; border-radius: 6px;
-                font-size: 12px; color: #78350f; margin-top: 4px; }
+/* Product detail modal */
+.prod-detail-photo { width: 100%; max-height: 200px; object-fit: cover;
+                     border-radius: 8px; margin-bottom: 12px; }
+.prod-detail-ph { width: 100%; height: 140px; background: #e5e7eb; border-radius: 8px;
+                   display: flex; align-items: center; justify-content: center;
+                   font-size: 48px; margin-bottom: 12px; }
+.detail-row { display: flex; justify-content: space-between; padding: 6px 0;
+              border-bottom: 1px solid #f3f4f6; font-size: 14px; }
+.detail-row:last-child { border-bottom: none; }
+.detail-label { color: var(--gray); font-size: 13px; }
+.detail-val   { font-weight: 600; text-align: right; }
 
-/* Loading */
-.loading { text-align: center; padding: 40px; color: var(--gray); font-size: 16px; }
+/* Restock modal */
+.restock-item { display: flex; align-items: center; gap: 10px; padding: 8px 0;
+                border-bottom: 1px solid #f3f4f6; }
+.restock-item:last-child { border-bottom: none; }
+.restock-item label { flex: 1; font-size: 13px; }
+.restock-item input { width: 70px; padding: 6px 8px; border-radius: 6px;
+                       border: 1.5px solid #d1d5db; text-align: center; font-size: 14px; }
 
-/* Conveyor animation */
+/* Conveyor */
 @keyframes conveyor { 0%{background-position:0 0} 100%{background-position:40px 0} }
 .conveyor-active { background: repeating-linear-gradient(
     90deg, #2563eb 0,#2563eb 20px,#1d4ed8 20px,#1d4ed8 40px);
   background-size: 40px 100%;
   animation: conveyor 1s linear infinite;
-  color:#fff; text-align:center; padding:8px; border-radius:8px;
-  font-size:13px; font-weight:600; margin-bottom:12px; }
+  color: #fff; text-align: center; padding: 8px; border-radius: 8px;
+  font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+
+.loading { text-align: center; padding: 40px; color: var(--gray); font-size: 16px; }
+.sticker-note { background: #fef3c7; padding: 4px 8px; border-radius: 6px;
+                font-size: 11px; color: #78350f; margin-top: 3px; display: inline-block; }
+.comment-note { background: #dbeafe; padding: 4px 8px; border-radius: 6px;
+                font-size: 11px; color: #1e3a8a; margin-top: 3px; display: inline-block; }
+
+.confirm-btn-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -139,32 +180,64 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 <div class="actions-bar">
   <button class="btn btn-primary" onclick="loadOrders()">🔄 Оновити</button>
   <button class="btn btn-outline" onclick="loadFromJson()">📂 Завантажити JSON</button>
+  <button class="btn btn-ghost" onclick="toggleCompleted()">📋 Виконані</button>
 </div>
 
 <div id="app" class="orders-list">
   <div class="loading">Завантаження замовлень...</div>
 </div>
 
-<!-- Modal: manual item -->
+<div id="completedSection" class="orders-list hidden">
+  <div class="section-label"><span>Виконані замовлення</span><hr></div>
+  <div id="completedList"><div class="loading">Завантаження...</div></div>
+</div>
+
+<!-- Modal: підтвердження ручного товару -->
 <div id="manualModal" class="modal-overlay hidden">
   <div class="modal">
-    <h3>⚠️ Товар відсутній в системі</h3>
+    <h3>⚠️ Потрібен ручний збір</h3>
     <p id="manualModalText"></p>
     <div class="modal-actions">
       <button class="btn btn-success" onclick="confirmManual()">✅ Поклав в коробку</button>
-      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
     </div>
   </div>
 </div>
 
-<!-- Modal: partial stock -->
-<div id="partialModal" class="modal-overlay hidden">
+<!-- Modal: деталі товару (read-only) -->
+<div id="itemDetailModal" class="modal-overlay hidden">
   <div class="modal">
-    <h3>⚠️ Не вистачає товару</h3>
-    <p id="partialModalText"></p>
+    <h3 id="detailTitle">Товар</h3>
+    <div id="detailContent"></div>
     <div class="modal-actions">
-      <button class="btn btn-success" onclick="confirmManual()">✅ Доклав решту</button>
-      <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Закрити</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: поповнення залишків -->
+<div id="restockModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>📦 Поповнити залишки</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px">
+      Вкажіть нову кількість для товарів з нестачею:
+    </p>
+    <div id="restockItems"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="saveRestock()">💾 Зберегти залишки</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: видалення замовлення -->
+<div id="deleteModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>🗑️ Видалити замовлення?</h3>
+    <p id="deleteModalText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-danger" onclick="confirmDelete()">Видалити</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
     </div>
   </div>
 </div>
@@ -174,7 +247,9 @@ let orders = [];
 let boxes = [];
 let currentManualItemId = null;
 let currentOrderDbId = null;
-let isSimulation = false;
+let currentDeleteOrderId = null;
+let restockItems = [];
+let completedVisible = false;
 
 async function init() {
   await loadBoxes();
@@ -186,9 +261,8 @@ async function init() {
 async function checkSimulation() {
   try {
     const r = await fetch('/api/status');
-    const data = await r.json();
-    isSimulation = data.simulation;
-    document.getElementById('simBadge').classList.toggle('hidden', !isSimulation);
+    const d = await r.json();
+    document.getElementById('simBadge').classList.toggle('hidden', !d.simulation);
   } catch {}
 }
 
@@ -204,12 +278,66 @@ async function loadOrders() {
 }
 
 async function loadFromJson() {
-  const r = await fetch('/api/orders/load', {method:'POST'});
-  const data = await r.json();
-  if (data.error) { alert(data.error); return; }
-  alert(`Завантажено ${data.added} нових замовлень`);
+  const r = await fetch('/api/orders/load', { method: 'POST' });
+  const d = await r.json();
+  if (d.error) { alert(d.error); return; }
+  alert(`Завантажено ${d.added} нових замовлень`);
   await loadOrders();
 }
+
+async function toggleCompleted() {
+  completedVisible = !completedVisible;
+  const sec = document.getElementById('completedSection');
+  sec.classList.toggle('hidden', !completedVisible);
+  if (completedVisible) await loadCompletedOrders();
+}
+
+async function loadCompletedOrders() {
+  const r = await fetch('/api/orders/completed');
+  const data = await r.json();
+  const list = document.getElementById('completedList');
+  if (!data.length) {
+    list.innerHTML = '<div class="loading">Немає виконаних замовлень</div>';
+    return;
+  }
+  list.innerHTML = data.map(o => renderCompletedOrder(o)).join('');
+}
+
+// ─── Розрахунок рекомендованої коробки ──────────────────────────────────────
+
+function recommendBox(items) {
+  let totalVol = 0;
+  let hasDims = false;
+  for (const item of items) {
+    const l = (item.length || 0) / 10;
+    const w = (item.width  || 0) / 10;
+    const h = (item.height || 0) / 10;
+    if (l > 0 && w > 0 && h > 0) {
+      totalVol += l * w * h * item.quantity_ordered;
+      hasDims = true;
+    }
+  }
+  if (!hasDims || !totalVol) return null;
+
+  const sorted = [...boxes].sort((a, b) =>
+    (a.length * a.width * a.height) - (b.length * b.width * b.height)
+  );
+  for (const box of sorted) {
+    const fill = (box.max_fill_pct || 80) / 100;
+    const usable = (box.length / 10) * (box.width / 10) * (box.height / 10) * fill;
+    if (usable >= totalVol) return { box, fillPct: Math.round((totalVol / ((box.length/10)*(box.width/10)*(box.height/10))) * 100) };
+  }
+  const last = sorted[sorted.length - 1];
+  return last ? { box: last, fillPct: null } : null;
+}
+
+// ─── Перевірка нестачі залишків ───────────────────────────────────────────────
+
+function getStockIssues(order) {
+  return order.items.filter(i => i.has_servo && i.cell_stock < i.quantity_ordered);
+}
+
+// ─── Рендер активних замовлень ────────────────────────────────────────────────
 
 function renderOrders() {
   const app = document.getElementById('app');
@@ -217,171 +345,237 @@ function renderOrders() {
     app.innerHTML = '<div class="loading">✅ Немає активних замовлень</div>';
     return;
   }
-
   app.innerHTML = orders.map(o => renderOrder(o)).join('');
 }
 
-function renderOrder(o) {
-  const statusLabels = {pending:'Очікує', picking:'Комплектація', packed:'Запаковано'};
-  const statusClass  = {pending:'badge-pending', picking:'badge-picking', packed:'badge-packed'};
+function totalUnits(items) {
+  return items.reduce((s, i) => s + i.quantity_ordered, 0);
+}
 
-  // Alerts для замовлення
-  const manualItems = o.items.filter(i => i.is_manual || i.status === 'manual');
+function formatDate(iso) {
+  if (!iso) return '';
+  return new Date(iso).toLocaleDateString('uk', { day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function renderOrder(o) {
+  const statusLabels = { pending:'Очікує', picking:'Комплектується', packed:'Запаковано', done:'Виконано' };
+  const statusClass  = { pending:'badge-pending', picking:'badge-picking', packed:'badge-packed', done:'badge-done' };
+  const units = totalUnits(o.items);
+  const dateStr = formatDate(o.created_at);
+
+  const stockIssues = o.status === 'pending' ? getStockIssues(o) : [];
+  const manualItems  = o.items.filter(i => i.status === 'manual');
   const partialItems = o.items.filter(i => i.status === 'partial');
 
+  // Alerts
   let alerts = '';
-  if (manualItems.length) {
-    alerts += `<div class="alert alert-warning">
-      ⚠️ ${manualItems.length} товар(ів) потрібно покласти вручну
-    </div>`;
+  if (o.status === 'picking') {
+    if (manualItems.length)  alerts += `<div class="alert alert-warning">⚠️ ${manualItems.length} позицій — покласти вручну</div>`;
+    if (partialItems.length) alerts += `<div class="alert alert-warning">⚠️ Деяких товарів не вистачило — докладіть решту</div>`;
   }
-  if (partialItems.length) {
-    alerts += `<div class="alert alert-warning">
-      ⚠️ Деяких товарів не вистачає на полиці — докладіть вручну
-    </div>`;
+  if (stockIssues.length) {
+    alerts += `<div class="alert alert-danger">🔴 Нестача товарів у ${stockIssues.length} позиціях</div>`;
   }
 
-  // Box selector (тільки для pending)
-  let boxSelector = '';
+  // Box section
+  let boxSection = '';
   if (o.status === 'pending') {
-    const opts = boxes.map(b =>
-      `<option value="${b.id}">${b.name}</option>`
-    ).join('');
-    boxSelector = `<div class="box-selector">
-      <label>📦 Оберіть коробку:</label>
-      <select id="box_${o.id}">${opts || '<option>Немає коробок</option>'}</select>
-    </div>`;
+    const rec = recommendBox(o.items);
+    const recHtml = rec
+      ? `<div class="box-recommend">📦 Рекомендована коробка: <strong>${rec.box.name}</strong>${rec.fillPct ? ` (заповн. ~${rec.fillPct}%)` : ''}</div>`
+      : '';
+    const opts = boxes.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
+    boxSection = `${recHtml}
+      <div class="box-selector">
+        <label>Оберіть коробку:</label>
+        <select id="box_${o.id}">${opts || '<option>Немає коробок</option>'}</select>
+      </div>`;
   } else if (o.box) {
-    boxSelector = `<div class="alert alert-info" style="margin-bottom:12px">
-      📦 Коробка: <strong>${o.box.name}</strong> (${o.box.length}×${o.box.width}×${o.box.height} мм)
-    </div>`;
+    const dims = `${(o.box.length/10).toFixed(0)}×${(o.box.width/10).toFixed(0)}×${(o.box.height/10).toFixed(0)} см`;
+    boxSection = `<div class="alert alert-info" style="margin-bottom:10px">
+      📦 <strong>Візьміть коробку: ${o.box.name}</strong> (${dims})</div>`;
   }
 
   // Items
-  const itemsHtml = o.items.map(i => renderItem(i, o)).join('');
+  const itemsHtml = renderItemsTable(o);
 
   // Action buttons
-  let actionBtn = '';
+  let actions = '';
   if (o.status === 'pending') {
-    actionBtn = `<button class="btn btn-primary" style="width:100%;margin-top:12px;padding:14px"
-      onclick="startOrder(${o.id})">🚀 Комплектація</button>`;
-  } else if (o.status === 'picking') {
-    const allDone = o.items.every(i => i.status === 'done' || i.status === 'manual');
-    actionBtn = `<button class="btn btn-success" style="width:100%;margin-top:12px;padding:14px"
-      ${!allDone ? 'disabled' : ''} onclick="packOrder(${o.id})">
-      ✅ Запаковано</button>`;
-    if (!allDone) {
-      actionBtn += `<p style="text-align:center;color:#6b7280;font-size:12px;margin-top:6px">
-        Підтвердіть всі ручні позиції</p>`;
+    if (stockIssues.length) {
+      actions = `<div class="action-area">
+        <div class="action-row">
+          <button class="btn btn-warning" style="flex:1"
+            onclick="openRestockModal(${o.id}, event)">📦 Поповнити товари</button>
+          <button class="btn btn-outline" style="flex:1"
+            onclick="startOrder(${o.id})">🚀 Зібрати, доложимо вручну</button>
+        </div>
+      </div>`;
+    } else {
+      actions = `<div class="action-area">
+        <button class="btn btn-primary" style="padding:13px"
+          onclick="startOrder(${o.id})">🚀 Комплектація</button>
+      </div>`;
     }
+  } else if (o.status === 'picking') {
+    const allDone = o.items.every(i => i.status === 'done');
+    actions = `<div class="action-area">
+      <button class="btn btn-success" style="padding:13px" ${!allDone ? 'disabled' : ''}
+        onclick="packOrder(${o.id})">✅ Запаковано</button>
+      ${!allDone ? '<p style="text-align:center;color:#6b7280;font-size:12px">Підтвердіть усі ручні позиції</p>' : ''}
+    </div>`;
   }
+
+  const isOpen = o.status === 'picking' ? '' : 'style="display:none"';
 
   return `<div class="order-card ${o.status}" id="order_${o.id}">
-    <div class="order-header" onclick="toggleOrder(${o.id})">
-      <div>
+    <div class="order-header">
+      <div class="order-header-left" onclick="toggleOrder(${o.id})">
         <div class="order-title">🔖 ${o.order_id}</div>
-        <div class="order-meta">${o.items.length} позицій • ${new Date(o.created_at).toLocaleDateString('uk')}</div>
+        <div class="order-meta">${o.items.length} позицій • ${units} одиниць • ${dateStr}</div>
       </div>
-      <span class="status-badge ${statusClass[o.status]}">${statusLabels[o.status]}</span>
+      <div class="order-header-right">
+        <span class="status-badge ${statusClass[o.status] || 'badge-pending'}">${statusLabels[o.status] || o.status}</span>
+        ${o.status !== 'picking' ? `<button class="btn btn-ghost" title="Видалити" onclick="askDelete(${o.id}, '${o.order_id}')">🗑️</button>` : ''}
+      </div>
     </div>
-    <div class="order-body" id="body_${o.id}" ${o.status === 'pending' ? 'style="display:none"' : ''}>
+    <div class="order-body" id="body_${o.id}" ${isOpen}>
       ${o.status === 'picking' ? '<div class="conveyor-active">🏭 Конвеєр активний</div>' : ''}
       ${alerts}
-      ${boxSelector}
-      <div>${itemsHtml}</div>
-      ${actionBtn}
+      ${boxSection}
+      ${itemsHtml}
+      ${actions}
     </div>
   </div>`;
 }
 
-function renderItem(item, order) {
+function renderItemsTable(order) {
+  const isPicking = order.status === 'picking';
+  const rows = order.items.map(item => renderItemRow(item, order, isPicking)).join('');
+  return `<table class="items-table">
+    <thead>
+      <tr>
+        <th style="width:44px"></th>
+        <th>Товар</th>
+        <th class="qty-col">Зам.</th>
+        <th class="stock-col">Залишок</th>
+        <th class="status-col">Статус</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function renderItemRow(item, order, isPicking) {
   const photo = item.photo
-    ? `<img src="${item.photo}" class="item-photo" onerror="this.style.display='none'">`
-    : `<div class="item-photo-placeholder">📦</div>`;
+    ? `<img src="${item.photo}" class="item-thumb" onerror="this.style.display='none'">`
+    : `<div class="item-thumb-ph">📦</div>`;
 
-  let qtyHtml = '';
-  if (item.status === 'done') {
-    qtyHtml = `<span class="picked">✅ ${item.quantity_picked} шт подано</span>`;
-  } else if (item.status === 'partial') {
-    const need = item.quantity_ordered - item.quantity_picked;
-    qtyHtml = `<span class="picked">${item.quantity_picked} шт подано</span>
-               <span class="need"> + доклади ${need} шт вручну</span>`;
-  } else if (item.status === 'manual' || item.is_manual) {
-    qtyHtml = `<span class="need">⚠️ ${item.quantity_ordered} шт вручну з полиці</span>`;
+  // Stock column
+  let stockHtml = '';
+  if (!item.has_servo) {
+    stockHtml = `<span class="stock-none">Немає комірки</span>`;
+  } else if (item.cell_stock === 0) {
+    stockHtml = `<span class="stock-zero">0</span>`;
+  } else if (item.cell_stock <= 3) {
+    stockHtml = `<span class="stock-low">${item.cell_stock}</span>`;
   } else {
-    qtyHtml = `${item.quantity_ordered} шт`;
+    stockHtml = `<span class="stock-ok">${item.cell_stock}</span>`;
   }
 
-  // Stock warning
-  let stockWarn = '';
-  if (item.has_servo && item.cell_stock <= 3 && item.cell_stock > 0) {
-    stockWarn = `<div class="stock-low">⚠️ Залишок в комірці: ${item.cell_stock} шт</div>`;
-  } else if (item.has_servo && item.cell_stock === 0) {
-    stockWarn = `<div class="stock-empty">🔴 Комірка порожня!</div>`;
+  // Status column
+  let statusHtml = '';
+  if (item.status === 'done')    statusHtml = `<span class="item-status-done" title="Зібрано">✅</span>`;
+  else if (item.status === 'manual') statusHtml = `<span class="item-status-manual" title="Вручну">✋</span>`;
+  else if (item.status === 'partial') statusHtml = `<span class="item-status-partial" title="Частково">⚠️</span>`;
+  else statusHtml = `<span class="item-status-pending">○</span>`;
+
+  // Sticker + comment inline
+  let extras = '';
+  if (item.sticker_count > 0)
+    extras += `<span class="sticker-note">🏷️ ${item.sticker_count} стікер: ${item.sticker_note}</span> `;
+  if (item.comment)
+    extras += `<span class="comment-note">💬 ${item.comment}</span>`;
+
+  // Manual confirm buttons
+  let confirmRow = '';
+  if (isPicking && (item.status === 'manual' || item.status === 'partial')) {
+    const need = item.quantity_ordered - item.quantity_picked;
+    const label = item.status === 'partial' ? `Доклади ${need} шт` : `${item.quantity_ordered} шт з полиці`;
+    confirmRow = `<tr>
+      <td colspan="5" style="padding:0 8px 8px 52px">
+        <div class="confirm-btn-row">
+          <button class="btn btn-success btn-sm"
+            onclick="showManual(${item.id}, '${item.articl}', '${(item.name||'').replace(/'/g,"\\'")}', ${need}, ${order.id})">
+            ✅ Поклав (${label})</button>
+        </div>
+        ${extras ? `<div style="margin-top:4px">${extras}</div>` : ''}
+      </td>
+    </tr>`;
+    extras = '';
   }
 
-  // Sticker note
-  let stickerHtml = '';
-  if (item.sticker_count > 0) {
-    stickerHtml = `<div class="sticker-note">🏷️ Наклей ${item.sticker_count} стікер(ів): ${item.sticker_note}</div>`;
-  }
+  return `<tr class="clickable" onclick="openItemDetail(${JSON.stringify(item).replace(/"/g,'&quot;')})">
+    <td>${photo}</td>
+    <td class="item-name-cell">
+      <div class="name">${item.name}</div>
+      <div class="art">Арт: ${item.articl}</div>
+      ${extras ? `<div style="margin-top:2px">${extras}</div>` : ''}
+    </td>
+    <td class="qty-col">${item.quantity_ordered}</td>
+    <td class="stock-col">${stockHtml}</td>
+    <td class="status-col">${statusHtml}</td>
+  </tr>${confirmRow}`;
+}
 
-  // Comment
-  let commentHtml = '';
-  if (item.comment) {
-    commentHtml = `<div class="sticker-note" style="background:#dbeafe;color:#1e3a8a">
-      💬 ${item.comment}</div>`;
-  }
-
-  // Manual confirm button
-  let manualBtn = '';
-  if ((item.status === 'manual' || item.status === 'partial') && order.status === 'picking') {
-    manualBtn = `<button class="btn btn-success btn-sm" style="margin-top:6px"
-      onclick="showManual(${item.id}, '${item.articl}', '${item.name}', ${item.quantity_ordered - item.quantity_picked}, ${order.id})">
-      ✅ Поклав</button>`;
-  }
-
-  return `<div class="item-row">
-    ${photo}
-    <div class="item-info">
-      <div class="item-name">${item.name}</div>
-      <div class="item-art">Арт: ${item.articl}</div>
-      <div class="item-qty">${qtyHtml}</div>
-      ${stockWarn}
-      ${stickerHtml}
-      ${commentHtml}
-      ${manualBtn}
+function renderCompletedOrder(o) {
+  const dateStr = formatDate(o.packed_at || o.started_at || o.created_at);
+  const units = totalUnits(o.items);
+  return `<div class="order-card done" style="opacity:.7">
+    <div class="order-header">
+      <div class="order-header-left" onclick="toggleOrder('c${o.id}')">
+        <div class="order-title">✅ ${o.order_id}</div>
+        <div class="order-meta">${o.items.length} позицій • ${units} одиниць • ${dateStr}
+          ${o.box ? ` • ${o.box.name}` : ''}</div>
+      </div>
+      <div class="order-header-right">
+        <span class="status-badge badge-done">Виконано</span>
+      </div>
+    </div>
+    <div class="order-body" id="body_c${o.id}" style="display:none">
+      ${renderItemsTable(o)}
     </div>
   </div>`;
 }
+
+// ─── Дії ──────────────────────────────────────────────────────────────────────
 
 function toggleOrder(id) {
   const body = document.getElementById(`body_${id}`);
-  body.style.display = body.style.display === 'none' ? '' : 'none';
+  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
 }
 
 async function startOrder(orderId) {
   const boxSel = document.getElementById(`box_${orderId}`);
-  const boxId = boxSel ? boxSel.value : null;
-  const r = await fetch(`/api/orders/${orderId}/start`, {
+  const boxId = boxSel ? parseInt(boxSel.value) : null;
+  await fetch(`/api/orders/${orderId}/start`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({box_id: boxId})
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ box_id: boxId })
   });
   await loadOrders();
 }
 
 async function packOrder(orderId) {
-  await fetch(`/api/orders/${orderId}/packed`, {method:'POST'});
+  await fetch(`/api/orders/${orderId}/packed`, { method: 'POST' });
   await loadOrders();
 }
 
 function showManual(itemId, articl, name, qty, orderId) {
   currentManualItemId = itemId;
   currentOrderDbId = orderId;
-  const text = `Артикул <strong>${articl}</strong> — «${name}»<br>
-    Покладіть <strong>${qty} шт</strong> вручну з полиці в коробку.`;
-  document.getElementById('manualModalText').innerHTML = text;
+  document.getElementById('manualModalText').innerHTML =
+    `Артикул <strong>${articl}</strong> — «${name}»<br>Покладіть <strong>${qty} шт</strong> вручну в коробку.`;
   document.getElementById('manualModal').classList.remove('hidden');
 }
 
@@ -389,23 +583,106 @@ async function confirmManual() {
   if (!currentManualItemId) return;
   await fetch(`/api/orders/${currentOrderDbId}/confirm_manual`, {
     method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({item_id: currentManualItemId})
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: currentManualItemId })
   });
-  closeModal();
+  closeAllModals();
   await loadOrders();
 }
 
-async function cancelOrder(orderId) {
-  if (!confirm('Скасувати комплектацію? Залишок буде збережено.')) return;
-  await fetch(`/api/orders/${orderId}/cancel`, {method:'POST'});
+// ─── Деталі товару (read-only) ────────────────────────────────────────────────
+
+function openItemDetail(item) {
+  const photo = item.photo
+    ? `<img src="${item.photo}" class="prod-detail-photo" onerror="this.style.display='none'">`
+    : `<div class="prod-detail-ph">📦</div>`;
+
+  const dimsCm = (item.length && item.width && item.height)
+    ? `${(item.length/10).toFixed(1)} × ${(item.width/10).toFixed(1)} × ${(item.height/10).toFixed(1)} см`
+    : '—';
+
+  let stockTxt = '';
+  if (!item.has_servo) stockTxt = 'Немає комірки в системі';
+  else stockTxt = `${item.cell_stock} / ${item.cell_capacity || '?'} шт`;
+
+  let detailRows = `
+    <div class="detail-row"><span class="detail-label">Артикул</span><span class="detail-val">${item.articl}</span></div>
+    <div class="detail-row"><span class="detail-label">Замовлено</span><span class="detail-val">${item.quantity_ordered} шт</span></div>
+    <div class="detail-row"><span class="detail-label">Залишок</span><span class="detail-val">${stockTxt}</span></div>
+    <div class="detail-row"><span class="detail-label">Розміри</span><span class="detail-val">${dimsCm}</span></div>`;
+
+  if (item.sticker_count > 0)
+    detailRows += `<div class="detail-row"><span class="detail-label">Стікери</span><span class="detail-val">${item.sticker_count} шт — ${item.sticker_note}</span></div>`;
+  if (item.comment)
+    detailRows += `<div class="detail-row"><span class="detail-label">Коментар</span><span class="detail-val" style="font-weight:400;color:#374151">${item.comment}</span></div>`;
+
+  document.getElementById('detailTitle').textContent = item.name || item.articl;
+  document.getElementById('detailContent').innerHTML = photo + detailRows;
+  document.getElementById('itemDetailModal').classList.remove('hidden');
+}
+
+// ─── Поповнення залишків ──────────────────────────────────────────────────────
+
+function openRestockModal(orderId, event) {
+  event.stopPropagation();
+  currentOrderDbId = orderId;
+  const order = orders.find(o => o.id === orderId);
+  if (!order) return;
+  restockItems = order.items.filter(i => i.has_servo && i.cell_stock < i.quantity_ordered && i.product_id);
+
+  const html = restockItems.map((item, idx) => `
+    <div class="restock-item">
+      <label><strong>${item.articl}</strong> — ${item.name}<br>
+        <span style="font-size:11px;color:#6b7280">Зараз: ${item.cell_stock} шт, потрібно: ${item.quantity_ordered} шт</span>
+      </label>
+      <input type="number" id="restock_${idx}" min="0"
+        placeholder="нова кількість" value="${Math.max(item.quantity_ordered, item.cell_stock)}">
+    </div>`).join('');
+
+  document.getElementById('restockItems').innerHTML = html || '<p style="color:#6b7280">Немає позицій для поповнення</p>';
+  document.getElementById('restockModal').classList.remove('hidden');
+}
+
+async function saveRestock() {
+  for (let idx = 0; idx < restockItems.length; idx++) {
+    const input = document.getElementById(`restock_${idx}`);
+    if (!input) continue;
+    const newStock = parseInt(input.value);
+    if (isNaN(newStock) || newStock < 0) continue;
+    const item = restockItems[idx];
+    await fetch(`/api/products/${item.product_id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cell_stock: newStock })
+    });
+  }
+  closeAllModals();
+  await loadBoxes();
   await loadOrders();
 }
 
-function closeModal() {
-  document.getElementById('manualModal').classList.add('hidden');
-  document.getElementById('partialModal').classList.add('hidden');
+// ─── Видалення замовлення ─────────────────────────────────────────────────────
+
+function askDelete(orderId, orderCode) {
+  currentDeleteOrderId = orderId;
+  document.getElementById('deleteModalText').textContent = `Видалити замовлення ${orderCode}? Цю дію не можна скасувати.`;
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+async function confirmDelete() {
+  if (!currentDeleteOrderId) return;
+  await fetch(`/api/orders/${currentDeleteOrderId}`, { method: 'DELETE' });
+  closeAllModals();
+  await loadOrders();
+}
+
+// ─── Утиліти ──────────────────────────────────────────────────────────────────
+
+function closeAllModals() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
   currentManualItemId = null;
+  currentDeleteOrderId = null;
+  restockItems = [];
 }
 
 init();
