@@ -1,7 +1,10 @@
 # TASK.md — Поточне завдання
 
-> Перед заповненням прочитай `AGENTS_GLOBAL.md` та `AI_AGENT_CONTEXT.md`.
-> Очищуй цей файл і пиши нове завдання перед кожною задачею.
+>  Прочитай:
+> task_description/AGENTS_GLOBAL.md
+> task_description/TASK.md
+> task_description/AI_AGENT_CONTEXT.md 
+> і переходь до виконання завдання.
 
 ---
 
