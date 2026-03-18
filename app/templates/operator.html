@@ -396,6 +396,12 @@ async function confirmManual() {
   await loadOrders();
 }
 
+async function cancelOrder(orderId) {
+  if (!confirm('Скасувати комплектацію? Залишок буде збережено.')) return;
+  await fetch(`/api/orders/${orderId}/cancel`, {method:'POST'});
+  await loadOrders();
+}
+
 function closeModal() {
   document.getElementById('manualModal').classList.add('hidden');
   document.getElementById('partialModal').classList.add('hidden');

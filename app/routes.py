@@ -92,7 +92,6 @@ def load_orders_from_json():
 
 @bp.route("/api/orders/<int:order_id>/start", methods=["POST"])
 def start_order(order_id):
-    """Оператор вибрав замовлення і натиснув 'Комплектація'."""
     order = Order.query.get_or_404(order_id)
     data = request.get_json() or {}
     box_id = data.get("box_id")
@@ -103,17 +102,18 @@ def start_order(order_id):
     order.started_at = datetime.utcnow()
     db.session.commit()
 
-    # Запускаємо серво в окремому потоці щоб не блокувати відповідь
-    thread = threading.Thread(target=_pick_order, args=(order.id,))
+    # Передаємо app в потік
+    app = current_app._get_current_object()
+    thread = threading.Thread(target=_pick_order, args=(app, order.id))
     thread.daemon = True
     thread.start()
 
     return jsonify({"ok": True, "order": order.to_dict()})
 
 
-def _pick_order(order_db_id: int):
+def _pick_order(app, order_db_id: int):
     """Виконати підбір замовлення — активувати серво для кожного товару."""
-    with current_app.app_context():
+    with app.app_context():
         order = Order.query.get(order_db_id)
         if not order:
             return
@@ -122,7 +122,6 @@ def _pick_order(order_db_id: int):
             product = Product.query.filter_by(articl=item.articl, is_active=True).first()
 
             if not product:
-                # Товар не в системі — позначити як manual
                 item.status = "manual"
                 item.is_manual = True
                 db.session.commit()
@@ -140,13 +139,10 @@ def _pick_order(order_db_id: int):
             pick_count = min(need, available)
             manual_count = need - pick_count
 
-            # Активуємо серво
             servo.release_multiple(product.servo_board, product.servo_channel, pick_count)
 
-            # Оновлюємо залишок
             product.cell_stock -= pick_count
 
-            # Логуємо
             log = StockLog(
                 articl=item.articl,
                 order_id=order.order_id,
@@ -155,13 +151,8 @@ def _pick_order(order_db_id: int):
             db.session.add(log)
 
             item.quantity_picked = pick_count
-            if manual_count > 0:
-                item.status = "partial"
-            else:
-                item.status = "done"
+            item.status = "partial" if manual_count > 0 else "done"
             db.session.commit()
-
-        db.session.commit()
 
 
 @bp.route("/api/orders/<int:order_id>/confirm_manual", methods=["POST"])
@@ -196,6 +187,23 @@ def done_order(order_id):
     order.status = "done"
     db.session.commit()
     return jsonify({"ok": True})
+
+
+@bp.route("/api/orders/<int:order_id>/cancel", methods=["POST"])
+def cancel_order(order_id):
+    """Оператор перервав комплектацію."""
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+
+    # Зберігаємо скільки вже подали
+    note = f"Скасовано оператором. Подано: " + ", ".join(
+        f"{i.articl}:{i.quantity_picked}"
+        for i in order.items if i.quantity_picked > 0
+    )
+    order.status = "cancelled"
+    order.packed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({"ok": True, "note": note})
 
 
 # ─── API: Товари ──────────────────────────────────────────────────────────────
