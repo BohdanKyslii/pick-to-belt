@@ -207,6 +207,21 @@ def pack_order(order_id):
     return jsonify({"ok": True})
 
 
+@bp.route("/api/orders/<int:order_id>/mark_absent", methods=["POST"])
+def mark_absent(order_id):
+    """Позначити позицію як відсутню (не відібрано, не відвантажується)."""
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    item_id = data.get("item_id")
+    item = next((i for i in order.items if i.id == item_id), None)
+    if not item:
+        return jsonify({"error": "Позицію не знайдено"}), 404
+    item.status = "absent"
+    item.quantity_picked = 0
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @bp.route("/api/orders/<int:order_id>/done", methods=["POST"])
 def done_order(order_id):
     order = Order.query.get_or_404(order_id)
@@ -475,6 +490,8 @@ def restock_product():
     if not p:
         return jsonify({"error": "Товар не знайдено"}), 404
     p.cell_stock = p.cell_stock + quantity
+    log = StockLog(articl=p.articl, order_id="", quantity=quantity, log_type="restock")
+    db.session.add(log)
     db.session.commit()
     return jsonify({"ok": True, "articl": p.articl, "cell_stock": p.cell_stock})
 
@@ -635,6 +652,7 @@ def get_report():
     total_items = sum(len(o.items) for o in orders)
     total_picked = sum(i.quantity_picked for o in orders for i in o.items)
     manual_items = sum(1 for o in orders for i in o.items if i.is_manual)
+    not_picked = sum(1 for o in orders for i in o.items if i.status == "absent")
 
     by_articl = {}
     for o in orders:
@@ -652,6 +670,7 @@ def get_report():
         "total_items": total_items,
         "total_picked": total_picked,
         "manual_items": manual_items,
+        "not_picked": not_picked,
         "top_products": top_products,
     })
 
@@ -714,6 +733,58 @@ def get_report_items():
 
     result = sorted(by_articl.values(), key=lambda x: x["picked"], reverse=True)
     return jsonify(result)
+
+
+@bp.route("/api/report/absent")
+def get_report_absent():
+    """Товари з статусом 'absent' (не відібрано) за період."""
+    since, until = _report_date_range()
+    q = Order.query.filter(
+        Order.started_at >= since,
+        Order.status.in_(["packed", "done"])
+    )
+    if until:
+        q = q.filter(Order.started_at < until)
+    orders_list = q.all()
+    rows = []
+    for o in orders_list:
+        for i in o.items:
+            if i.status == "absent":
+                d = i.to_dict()
+                rows.append({
+                    "order_id": o.order_id,
+                    "articl": i.articl,
+                    "name": d["name"],
+                    "quantity_ordered": i.quantity_ordered,
+                })
+    return jsonify(rows)
+
+
+@bp.route("/api/report/restock")
+def get_report_restock():
+    """Поповнення комірок оператором за період."""
+    since, until = _report_date_range()
+    q = StockLog.query.filter(
+        StockLog.log_type == "restock",
+        StockLog.created_at >= since,
+    )
+    if until:
+        q = q.filter(StockLog.created_at < until)
+    logs = q.order_by(StockLog.created_at.desc()).all()
+    by_articl = {}
+    for lg in logs:
+        p = Product.query.filter_by(articl=lg.articl).first()
+        if lg.articl not in by_articl:
+            by_articl[lg.articl] = {
+                "articl": lg.articl,
+                "name": p.name if p else lg.articl,
+                "total": 0,
+            }
+        by_articl[lg.articl]["total"] += lg.quantity
+    result = sorted(by_articl.values(), key=lambda x: x["total"], reverse=True)
+    # також загальна кількість
+    total_restock = sum(lg.quantity for lg in logs)
+    return jsonify({"total": total_restock, "items": result})
 
 
 @bp.route("/api/report/export")

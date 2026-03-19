@@ -146,6 +146,7 @@ class OrderItem(db.Model):
             "length": product.length if product else 0,
             "width": product.width if product else 0,
             "height": product.height if product else 0,
+            "weight": product.weight if product else 0,
             "sticker_count": product.sticker_count if product else 0,
             "sticker_note": product.sticker_note if product else "",
             "comment": product.comment if product else "",
@@ -159,6 +160,7 @@ class StockLog(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     articl = db.Column(db.String(50), nullable=False)
-    order_id = db.Column(db.String(50), nullable=False)
+    order_id = db.Column(db.String(50), nullable=False, default="")
     quantity = db.Column(db.Integer, nullable=False)
+    log_type = db.Column(db.String(20), default="pick")  # 'pick' | 'restock'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

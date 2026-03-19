@@ -121,6 +121,16 @@ body { font-family:-apple-system,sans-serif; background:#f0f4f8; min-height:100v
       <div class="kpi-label">Вручну</div>
       <div class="kpi-hint">натисніть для перегляду</div>
     </div>
+    <div class="kpi-card" onclick="openOrdersList('absent')">
+      <div class="kpi-val" id="kpiAbsent" style="color:var(--danger)">—</div>
+      <div class="kpi-label">Не відібрано</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
+    <div class="kpi-card" onclick="openOrdersList('restock')">
+      <div class="kpi-val" id="kpiRestock" style="color:var(--success)">—</div>
+      <div class="kpi-label">Завантажено в комірки</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🏆 Топ товарів</div>
@@ -176,10 +186,17 @@ async function loadReport() {
   const params = buildQueryParams();
   const r = await fetch(`/api/report?${params}`);
   reportData = await r.json();
-  document.getElementById('kpiOrders').textContent = reportData.total_orders;
-  document.getElementById('kpiItems').textContent  = reportData.total_items;
-  document.getElementById('kpiPicked').textContent = reportData.total_picked;
-  document.getElementById('kpiManual').textContent = reportData.manual_items;
+  document.getElementById('kpiOrders').textContent  = reportData.total_orders;
+  document.getElementById('kpiItems').textContent   = reportData.total_items;
+  document.getElementById('kpiPicked').textContent  = reportData.total_picked;
+  document.getElementById('kpiManual').textContent  = reportData.manual_items;
+  document.getElementById('kpiAbsent').textContent  = reportData.not_picked ?? 0;
+
+  // Restock KPI окремим запитом
+  fetch(`/api/report/restock?${buildQueryParams()}`)
+    .then(r => r.json())
+    .then(d => { document.getElementById('kpiRestock').textContent = d.total ?? 0; })
+    .catch(() => {});
 
   const top = document.getElementById('topProducts');
   if (!reportData.top_products.length) {
@@ -198,10 +215,12 @@ async function loadReport() {
 }
 
 const kpiTitles = {
-  orders: 'Список замовлень',
-  items:  'Позиції — Відібрано та Вручну',
-  picked: 'Відібрано по товарах',
-  manual: 'Вручну по товарах',
+  orders:   'Список замовлень',
+  items:    'Позиції — Відібрано та Вручну',
+  picked:   'Відібрано по товарах',
+  manual:   'Вручну по товарах',
+  absent:   'Не відібрано (товар відсутній)',
+  restock:  'Завантажено в комірки операторами',
 };
 
 async function openOrdersList(kpiType) {
@@ -241,6 +260,52 @@ async function openOrdersList(kpiType) {
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
+  } else if (kpiType === 'absent') {
+    const r = await fetch(`/api/report/absent?${params}`);
+    const data = await r.json();
+    if (!data.length) {
+      document.getElementById('ordersModalContent').innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:20px">Не відібраних товарів немає</p>';
+      document.getElementById('ordersModal').classList.remove('hidden');
+      return;
+    }
+    const rows = data.map(d => `<tr>
+      <td style="font-size:12px;color:#6b7280">${d.articl}</td>
+      <td>${d.name}</td>
+      <td style="font-size:12px;color:#6b7280">${d.order_id}</td>
+      <td style="text-align:center;font-weight:700;color:#dc2626">${d.quantity_ordered}</td>
+    </tr>`).join('');
+    document.getElementById('ordersModalContent').innerHTML = `
+      <table class="orders-table"><thead><tr>
+        <th>Артикул</th><th>Назва</th><th>Замовлення</th>
+        <th style="text-align:center">К-сть</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+    document.getElementById('ordersModal').classList.remove('hidden');
+    return;
+
+  } else if (kpiType === 'restock') {
+    const r = await fetch(`/api/report/restock?${params}`);
+    const d = await r.json();
+    const data = d.items || [];
+    if (!data.length) {
+      document.getElementById('ordersModalContent').innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:20px">Поповнень за цей період не було</p>';
+      document.getElementById('ordersModal').classList.remove('hidden');
+      return;
+    }
+    const rows = data.map(x => `<tr>
+      <td style="font-size:12px;color:#6b7280">${x.articl}</td>
+      <td>${x.name}</td>
+      <td style="text-align:center;font-weight:700;color:#16a34a">${x.total}</td>
+    </tr>`).join('');
+    document.getElementById('ordersModalContent').innerHTML = `
+      <table class="orders-table"><thead><tr>
+        <th>Артикул</th><th>Назва</th>
+        <th style="text-align:center">Доложено шт</th>
+      </tr></thead><tbody>${rows}</tbody></table>`;
+    document.getElementById('ordersModal').classList.remove('hidden');
+    return;
+
   } else {
     // items / picked / manual — зведення по артикулах
     const r = await fetch(`/api/report/items?${params}`);

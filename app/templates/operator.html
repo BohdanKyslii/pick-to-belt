@@ -476,6 +476,8 @@ let currentTab = 'orders';
 let cellsSort = { col: 'name', dir: 'asc' };
 // Зберігаємо стан відкритих замовлень між ре-рендерами
 const openOrders = new Set();
+// Кеш коментарів — щоб текст не зникав при авто-оновленні
+const commentCache = new Map();
 
 async function init() {
   await loadBoxes();
@@ -585,15 +587,32 @@ function getStockIssues(order) {
 
 function renderOrders() {
   const app = document.getElementById('app');
+  // Зберігаємо текст коментарів перед ре-рендером
+  document.querySelectorAll('[id^="comment_"]').forEach(el => {
+    const oid = parseInt(el.id.replace('comment_', ''));
+    if (!isNaN(oid)) commentCache.set(oid, el.value);
+  });
   if (!orders.length) {
     app.innerHTML = '<div class="loading">✅ Немає активних замовлень</div>';
     return;
   }
   app.innerHTML = orders.map(o => renderOrder(o)).join('');
+  // Відновлюємо коментарі після рендеру
+  commentCache.forEach((val, oid) => {
+    const el = document.getElementById(`comment_${oid}`);
+    if (el) el.value = val;
+  });
 }
 
 function totalUnits(items) {
   return items.reduce((s, i) => s + i.quantity_ordered, 0);
+}
+
+function orderTotalWeight(o) {
+  const itemsG = o.items.reduce((s, i) => s + (i.weight || 0) * i.quantity_ordered, 0);
+  const boxG = o.box ? (o.box.weight || 0) : 0;
+  const total = (itemsG + boxG) / 1000;
+  return total > 0 ? `${total.toFixed(2)} кг` : null;
 }
 
 function formatDate(iso) {
@@ -606,6 +625,7 @@ function renderOrder(o) {
   const statusClass  = { pending:'badge-pending', picking:'badge-picking', packed:'badge-packed', done:'badge-done' };
   const units = totalUnits(o.items);
   const dateStr = formatDate(o.created_at);
+  const weightStr = orderTotalWeight(o);
 
   const stockIssues = o.status === 'pending' ? getStockIssues(o) : [];
   const manualItems  = o.items.filter(i => i.status === 'manual');
@@ -663,7 +683,7 @@ function renderOrder(o) {
       </div>
     </div>`;
   } else if (o.status === 'picking') {
-    const allDone = o.items.every(i => i.status === 'done');
+    const allDone = o.items.every(i => ['done', 'manual', 'absent'].includes(i.status));
     actions = `<div class="action-area">
       <div class="action-row">
         <button class="btn btn-success" style="flex:1;padding:13px" ${!allDone ? 'disabled' : ''}
@@ -675,8 +695,8 @@ function renderOrder(o) {
     </div>`;
   }
 
-  // Comment section
-  const commentVal = (o.comment || '').replace(/"/g, '&quot;');
+  // Comment section — беремо з кешу якщо є (незбережений введений текст)
+  const commentVal = (commentCache.has(o.id) ? commentCache.get(o.id) : (o.comment || '')).replace(/"/g, '&quot;');
   const commentSection = `<div class="comment-area">
     <label>💬 Коментар до замовлення</label>
     <textarea id="comment_${o.id}" rows="2" placeholder="Додати коментар...">${commentVal}</textarea>
@@ -694,7 +714,7 @@ function renderOrder(o) {
     <div class="order-header" onclick="toggleOrder(${o.id})">
       <div class="order-header-left">
         <div class="order-title">🔖 ${o.order_id}${o.order_date ? `<span class="order-date">від ${o.order_date}</span>` : ''}</div>
-        <div class="order-meta">${o.items.length} позицій • ${units} одиниць • ${dateStr}</div>
+        <div class="order-meta">${o.items.length} позицій • ${units} одиниць${weightStr ? ` • ⚖️ ${weightStr}` : ''} • ${dateStr}</div>
       </div>
       <div class="order-header-right" onclick="event.stopPropagation()">
         <span class="status-badge ${statusClass[o.status] || 'badge-pending'}">${statusLabels[o.status] || o.status}</span>
@@ -723,6 +743,7 @@ function renderItemsTable(order) {
         <th class="qty-col">Зам.</th>
         <th class="stock-col">Залишок</th>
         <th class="status-col">Статус</th>
+        <th class="qty-col" style="color:#16a34a">Зібрано</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
@@ -751,7 +772,15 @@ function renderItemRow(item, order, isPicking) {
   if (item.status === 'done')    statusHtml = `<span class="item-status-done" title="Зібрано">✅</span>`;
   else if (item.status === 'manual') statusHtml = `<span class="item-status-manual" title="Вручну">✋</span>`;
   else if (item.status === 'partial') statusHtml = `<span class="item-status-partial" title="Частково">⚠️</span>`;
+  else if (item.status === 'absent') statusHtml = `<span title="Товар відсутній" style="font-size:18px">❌</span>`;
   else statusHtml = `<span class="item-status-pending">○</span>`;
+
+  // Зібрано column
+  const pickedHtml = item.status === 'absent'
+    ? `<span style="color:#dc2626;font-size:11px">відсутній</span>`
+    : item.quantity_picked > 0
+      ? `<span style="color:#16a34a;font-weight:700">${item.quantity_picked}</span>`
+      : `<span style="color:#9ca3af">—</span>`;
 
   // Sticker + comment inline
   let extras = '';
@@ -768,11 +797,13 @@ function renderItemRow(item, order, isPicking) {
     const need = item.quantity_ordered - item.quantity_picked;
     const label = item.status === 'partial' ? `Доклади ${need} шт` : `${item.quantity_ordered} шт з полиці`;
     confirmRow = `<tr>
-      <td colspan="5" style="padding:0 8px 8px 52px">
+      <td colspan="6" style="padding:0 8px 8px 52px">
         <div class="confirm-btn-row">
           <button class="btn btn-success btn-sm"
             onclick="showManual(${item.id}, '${item.articl}', '${(item.name||'').replace(/'/g,"\\'")}', ${need}, ${order.id})">
             ✅ Поклав (${label})</button>
+          <button class="btn btn-danger btn-sm"
+            onclick="markAbsent(${item.id}, ${order.id})">❌ Товар відсутній</button>
         </div>
         ${extras ? `<div style="margin-top:4px">${extras}</div>` : ''}
       </td>
@@ -790,6 +821,7 @@ function renderItemRow(item, order, isPicking) {
     <td class="qty-col">${item.quantity_ordered}</td>
     <td class="stock-col">${stockHtml}</td>
     <td class="status-col">${statusHtml}</td>
+    <td class="qty-col">${pickedHtml}</td>
   </tr>${confirmRow}`;
 }
 
@@ -830,7 +862,21 @@ function toggleOrder(id) {
   }
 }
 
+async function autoSaveComment(orderId) {
+  const val = commentCache.get(orderId);
+  if (val === undefined) return;
+  const order = orders.find(o => o.id === orderId);
+  if (order && val === order.comment) return; // без змін
+  await fetch(`/api/orders/${orderId}/comment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment: val })
+  });
+  if (order) order.comment = val;
+}
+
 async function startOrder(orderId) {
+  await autoSaveComment(orderId);
   const boxSel = document.getElementById(`box_${orderId}`);
   const boxId = boxSel ? parseInt(boxSel.value) : null;
   await fetch(`/api/orders/${orderId}/start`, {
@@ -867,6 +913,7 @@ function openRestockFromStockModal() {
 }
 
 async function packOrder(orderId) {
+  await autoSaveComment(orderId);
   await fetch(`/api/orders/${orderId}/packed`, { method: 'POST' });
   await loadOrders();
 }
@@ -877,6 +924,15 @@ function showManual(itemId, articl, name, qty, orderId) {
   document.getElementById('manualModalText').innerHTML =
     `Артикул <strong>${articl}</strong> — «${name}»<br>Покладіть <strong>${qty} шт</strong> вручну в коробку.`;
   document.getElementById('manualModal').classList.remove('hidden');
+}
+
+async function markAbsent(itemId, orderId) {
+  await fetch(`/api/orders/${orderId}/mark_absent`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: itemId })
+  });
+  await loadOrders();
 }
 
 async function confirmManual() {
