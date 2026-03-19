@@ -101,6 +101,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .modal-overlay.hidden { display:none; }
 .modal { background:#fff;border-radius:var(--radius);padding:20px;
          width:100%;max-width:500px;max-height:92vh;overflow-y:auto; }
+.modal-wide { max-width:680px; }
 .modal h3 { font-size:17px;font-weight:700;margin-bottom:14px; }
 .form-group { margin-bottom:10px; }
 .form-group label { display:block;font-size:12px;color:var(--gray);margin-bottom:3px;font-weight:600; }
@@ -114,13 +115,23 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .modal-divider { border:none;border-top:1px solid #e5e7eb;margin:12px 0; }
 
 /* Photo preview */
-.photo-area { position:relative;margin-bottom:10px; }
-.photo-preview { width:80px;height:80px;border-radius:8px;object-fit:cover;display:block; }
-.photo-placeholder { width:80px;height:80px;border-radius:8px;background:#e5e7eb;
-                     display:flex;align-items:center;justify-content:center;font-size:30px; }
-.photo-del-btn { position:absolute;top:-6px;left:68px;background:var(--danger);
-                 color:#fff;border:none;border-radius:50%;width:20px;height:20px;
-                 cursor:pointer;font-size:11px;line-height:20px;text-align:center; }
+.photo-area { position:relative;display:inline-block;margin-bottom:8px; }
+.photo-preview { width:100px;height:100px;border-radius:8px;object-fit:cover;display:block; }
+.photo-placeholder { width:100px;height:100px;border-radius:8px;background:#e5e7eb;
+                     display:flex;align-items:center;justify-content:center;font-size:36px; }
+.photo-del-btn { position:absolute;top:-6px;right:-6px;background:var(--danger);
+                 color:#fff;border:none;border-radius:50%;width:22px;height:22px;
+                 cursor:pointer;font-size:12px;line-height:22px;text-align:center; }
+.photo-upload-input { font-size:12px;color:var(--gray);margin-top:4px;display:block; }
+/* Стікерний textarea — розмір як справжній ярлик */
+.sticker-label-input { width:50mm !important;height:20mm !important;
+                       font-size:4pt !important;font-family:monospace;
+                       resize:none;padding:2px 4px;line-height:1.4;
+                       border:1.5px dashed #d1d5db;border-radius:4px;
+                       overflow:hidden;background:#fffef0; }
+.sticker-label-input:focus { border-color:var(--primary);outline:none; }
+/* Readonly volume field */
+.vol-field { background:#f3f4f6 !important;color:var(--gray);cursor:default; }
 
 /* Articl lookup */
 .articl-row { display:flex;gap:6px; }
@@ -227,27 +238,47 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 
 <!-- Catalog Product Modal -->
 <div id="catalogModal" class="modal-overlay hidden">
-  <div class="modal">
+  <div class="modal modal-wide">
     <h3 id="catalogModalTitle">Новий товар</h3>
     <input type="hidden" id="cEditId">
+
+    <!-- Фото -->
     <div class="form-group">
-      <label>Артикул *</label>
-      <input id="cArticl" placeholder="Введіть артикул">
+      <label>Фото товару</label>
+      <div class="photo-area" id="cPhotoArea">
+        <img id="cPhotoPreview" class="photo-preview" style="display:none" src="" alt="">
+        <div class="photo-placeholder" id="cPhotoPlaceholder">📦</div>
+        <button type="button" class="photo-del-btn" id="cPhotoDelBtn" style="display:none" onclick="deleteCatalogPhoto()">✕</button>
+      </div>
+      <input type="file" id="cPhotoFile" accept="image/*" class="photo-upload-input" onchange="previewCatalogPhoto(this)">
     </div>
-    <div class="form-group">
-      <label>Назва товару</label>
-      <input id="cName" placeholder="наприклад: Кабель USB-C 1м">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Артикул *</label>
+        <input id="cArticl" placeholder="Введіть артикул">
+      </div>
+      <div class="form-group">
+        <label>Назва товару</label>
+        <input id="cName" placeholder="наприклад: Кабель USB-C 1м">
+      </div>
     </div>
     <hr class="modal-divider">
     <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри (см)</div>
     <div class="form-row-3">
-      <div class="form-group"><label>Довжина</label><input id="cLength" type="number" step="0.1" value="0"></div>
-      <div class="form-group"><label>Ширина</label><input id="cWidth"  type="number" step="0.1" value="0"></div>
-      <div class="form-group"><label>Висота</label><input id="cHeight" type="number" step="0.1" value="0"></div>
+      <div class="form-group"><label>Довжина</label><input id="cLength" type="number" step="0.1" value="0" oninput="calcVolume()"></div>
+      <div class="form-group"><label>Ширина</label> <input id="cWidth"  type="number" step="0.1" value="0" oninput="calcVolume()"></div>
+      <div class="form-group"><label>Висота</label>  <input id="cHeight" type="number" step="0.1" value="0" oninput="calcVolume()"></div>
     </div>
-    <div class="form-group">
-      <label>Вага (г)</label>
-      <input id="cWeight" type="number" step="1" value="0">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Вага (г)</label>
+        <input id="cWeight" type="number" step="1" value="0">
+      </div>
+      <div class="form-group">
+        <label>Об'єм (см³) <span style="font-size:10px;color:#9ca3af">розраховується автоматично</span></label>
+        <input id="cVolume" type="text" class="vol-field" readonly value="0">
+      </div>
     </div>
     <hr class="modal-divider">
     <div class="form-row">
@@ -256,8 +287,8 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
         <input id="cStickerCount" type="number" value="0" min="0">
       </div>
       <div class="form-group">
-        <label>Опис стікера</label>
-        <input id="cStickerNote" placeholder="наприклад: EAC">
+        <label>Опис стікера <span style="font-size:10px;color:#9ca3af">50×20 мм · шрифт 4пт</span></label>
+        <textarea id="cStickerNote" class="sticker-label-input" placeholder="Текст стрічки..."></textarea>
       </div>
     </div>
     <div class="form-group">
@@ -529,15 +560,57 @@ function openCatalogModal(product) {
   document.getElementById('cHeight').value = product ? (product.height / 10).toFixed(1) : 0;
   document.getElementById('cWeight').value = product ? product.weight : 0;
   document.getElementById('cStickerCount').value = product ? product.sticker_count : 0;
-  document.getElementById('cStickerNote').value = product ? product.sticker_note : '';
-  document.getElementById('cComment').value = product ? product.comment : '';
+  document.getElementById('cStickerNote').value = product ? (product.sticker_note || '') : '';
+  document.getElementById('cComment').value = product ? (product.comment || '') : '';
 
   // Якщо у товару є комірка — показуємо її
   const inCell = product && product.servo_board === '0x40' && product.servo_channel >= 0 && product.servo_channel <= 15;
   document.getElementById('cChannel').value = inCell ? product.servo_channel : '';
 
+  // Фото
+  const photo = product && product.photo ? product.photo : null;
+  document.getElementById('cPhotoPreview').src = photo || '';
+  document.getElementById('cPhotoPreview').style.display = photo ? 'block' : 'none';
+  document.getElementById('cPhotoPlaceholder').style.display = photo ? 'none' : 'flex';
+  document.getElementById('cPhotoDelBtn').style.display = photo ? 'block' : 'none';
+  document.getElementById('cPhotoFile').value = '';
+
+  calcVolume();
   document.getElementById('catalogDeleteBtn').classList.toggle('hidden', !product);
   document.getElementById('catalogModal').classList.remove('hidden');
+}
+
+function calcVolume() {
+  const l = parseFloat(document.getElementById('cLength').value) || 0;
+  const w = parseFloat(document.getElementById('cWidth').value)  || 0;
+  const h = parseFloat(document.getElementById('cHeight').value) || 0;
+  document.getElementById('cVolume').value = (l > 0 && w > 0 && h > 0) ? (l * w * h).toFixed(1) : '0';
+}
+
+function previewCatalogPhoto(input) {
+  if (!input.files || !input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('cPhotoPreview').src = e.target.result;
+    document.getElementById('cPhotoPreview').style.display = 'block';
+    document.getElementById('cPhotoPlaceholder').style.display = 'none';
+    document.getElementById('cPhotoDelBtn').style.display = 'block';
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+async function deleteCatalogPhoto() {
+  if (currentCatalogProductId) {
+    await fetch(`/api/products/${currentCatalogProductId}/photo`, { method: 'DELETE' });
+    const p = allProducts.find(x => x.id === currentCatalogProductId);
+    if (p) p.photo = '';
+    renderCatalog();
+  }
+  document.getElementById('cPhotoFile').value = '';
+  document.getElementById('cPhotoPreview').src = '';
+  document.getElementById('cPhotoPreview').style.display = 'none';
+  document.getElementById('cPhotoPlaceholder').style.display = 'flex';
+  document.getElementById('cPhotoDelBtn').style.display = 'none';
 }
 
 async function saveCatalogProduct() {
@@ -559,6 +632,8 @@ async function saveCatalogProduct() {
     comment:       document.getElementById('cComment').value,
   };
 
+  let savedId = id ? parseInt(id) : null;
+
   if (id) {
     // Оновлення існуючого товару
     const updateData = { ...baseData, articl };
@@ -566,7 +641,6 @@ async function saveCatalogProduct() {
       updateData.servo_board = 0x40;
       updateData.servo_channel = channel;
     } else if (channelRaw === '') {
-      // Знімаємо з комірки — переносимо до каталогу
       updateData.servo_board = 0xFF;
       updateData.servo_channel = -1;
     }
@@ -577,28 +651,29 @@ async function saveCatalogProduct() {
     if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка збереження'); return; }
   } else {
     // Новий товар
+    let r;
     if (channel !== null && channel >= 0 && channel <= 15) {
-      // Зі своєю коміркою — використовуємо стандартний ендпоінт
-      const data = {
-        ...baseData, articl,
-        servo_board: 0x40,
-        servo_channel: channel,
-        cell_capacity: 10,
-        cell_stock: 0,
-      };
-      const r = await fetch('/api/products', {
+      r = await fetch('/api/products', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
+        body: JSON.stringify({ ...baseData, articl, servo_board: 0x40, servo_channel: channel, cell_capacity: 10, cell_stock: 0 })
       });
-      if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка'); return; }
     } else {
-      // Тільки в каталог (без комірки)
-      const r = await fetch('/api/products/catalog', {
+      r = await fetch('/api/products/catalog', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...baseData, articl })
       });
-      if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка'); return; }
     }
+    if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка'); return; }
+    const created = await r.json();
+    savedId = created.id;
+  }
+
+  // Завантажити фото якщо вибрано
+  const photoFile = document.getElementById('cPhotoFile').files[0];
+  if (photoFile && savedId) {
+    const form = new FormData();
+    form.append('photo', photoFile);
+    await fetch(`/api/products/${savedId}/photo`, { method: 'POST', body: form });
   }
 
   closeCatalogModal();
