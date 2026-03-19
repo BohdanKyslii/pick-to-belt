@@ -281,6 +281,59 @@ def delete_order(order_id):
     return jsonify({"ok": True})
 
 
+# ─── API: Огляд залишків комірок ──────────────────────────────────────────────
+
+@bp.route("/api/cells/overview")
+def get_cells_overview():
+    """Залишки по комірках vs потреби pending/picking замовлень."""
+    cell_products = Product.query.filter(
+        Product.servo_board == 0x40,
+        Product.servo_channel >= 0,
+        Product.servo_channel <= 15,
+        Product.is_active == True,
+    ).all()
+
+    # Попит по артикулах з усіх необроблених замовлень (pending)
+    pending_orders = Order.query.filter(Order.status.in_(["pending"])).all()
+    demand = {}
+    for order in pending_orders:
+        for item in order.items:
+            demand[item.articl] = demand.get(item.articl, 0) + item.quantity_ordered
+
+    in_cell_articls = set()
+    cells = []
+    for p in cell_products:
+        needed = demand.get(p.articl, 0)
+        cells.append({
+            "channel": p.servo_channel,
+            "product_id": p.id,
+            "articl": p.articl,
+            "name": p.name,
+            "photo": p.photo,
+            "cell_stock": p.cell_stock,
+            "cell_capacity": p.cell_capacity,
+            "needed": needed,
+            "sufficient": p.cell_stock >= needed,
+        })
+        in_cell_articls.add(p.articl)
+
+    cells.sort(key=lambda x: x["channel"])
+
+    # Товари потрібні в замовленнях але відсутні в комірках
+    missing = []
+    for articl, needed in demand.items():
+        if articl not in in_cell_articls:
+            p = Product.query.filter_by(articl=articl).first()
+            missing.append({
+                "articl": articl,
+                "name": p.name if p else "Невідомий товар",
+                "needed": needed,
+            })
+    missing.sort(key=lambda x: x["needed"], reverse=True)
+
+    return jsonify({"cells": cells, "missing": missing})
+
+
 # ─── API: Товари ──────────────────────────────────────────────────────────────
 
 @bp.route("/api/products")
@@ -393,21 +446,30 @@ def delete_photo(product_id):
 
 @bp.route("/api/products/restock", methods=["POST"])
 def restock_product():
-    """Поповнити залишок комірки за артикулом (додати до поточного)."""
+    """Поповнити залишок комірки за артикулом або product_id (додати до поточного)."""
     data = request.get_json() or {}
-    articl = data.get("articl", "").strip()
     try:
         quantity = int(data.get("quantity", 0))
     except (ValueError, TypeError):
         quantity = 0
-    if not articl or quantity <= 0:
-        return jsonify({"error": "Невірні дані"}), 400
-    p = Product.query.filter_by(articl=articl).first()
+    if quantity <= 0:
+        return jsonify({"error": "Кількість має бути більше 0"}), 400
+
+    product_id = data.get("product_id")
+    articl = data.get("articl", "").strip()
+
+    if product_id:
+        p = Product.query.get(product_id)
+    elif articl:
+        p = Product.query.filter_by(articl=articl).first()
+    else:
+        return jsonify({"error": "Вкажіть артикул або product_id"}), 400
+
     if not p:
-        return jsonify({"error": f"Товар з артикулом {articl} не знайдено"}), 404
+        return jsonify({"error": "Товар не знайдено"}), 404
     p.cell_stock = p.cell_stock + quantity
     db.session.commit()
-    return jsonify({"ok": True, "articl": articl, "cell_stock": p.cell_stock})
+    return jsonify({"ok": True, "articl": p.articl, "cell_stock": p.cell_stock})
 
 
 @bp.route("/api/products/catalog", methods=["POST"])

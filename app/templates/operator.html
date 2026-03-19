@@ -118,6 +118,55 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .action-area { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .action-row  { display: flex; gap: 8px; }
 
+/* Cells overview */
+.cells-overview { padding: 12px 16px; }
+.cells-overview-header { display: flex; align-items: center; justify-content: space-between;
+                         margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+.cells-overview-header h2 { font-size: 16px; font-weight: 700; color: #1f2937; }
+.cells-summary { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.cells-sum-card { background: #fff; border-radius: 10px; box-shadow: var(--shadow);
+                  padding: 10px 16px; text-align: center; flex: 1; min-width: 90px; }
+.cells-sum-val  { font-size: 24px; font-weight: 800; }
+.cells-sum-label { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.cells-sum-ok   { color: var(--success); }
+.cells-sum-warn { color: var(--warning); }
+.cells-sum-danger { color: var(--danger); }
+
+.cells-table-wrap { overflow-x: auto; background: #fff; border-radius: var(--radius);
+                    box-shadow: var(--shadow); margin-bottom: 16px; }
+.cells-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.cells-table th { text-align: left; padding: 8px 10px; font-size: 11px;
+                  color: var(--gray); border-bottom: 2px solid #e5e7eb; font-weight: 600;
+                  white-space: nowrap; }
+.cells-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+.cells-table tr:last-child td { border-bottom: none; }
+.cells-table .ch-col  { width: 40px; text-align: center; font-size: 11px; color: var(--gray); font-weight: 700; }
+.cells-table .num-col { text-align: center; width: 70px; font-weight: 700; }
+.cells-table .diff-ok     { color: var(--success); font-weight: 700; }
+.cells-table .diff-warn   { color: var(--warning);  font-weight: 700; }
+.cells-table .diff-danger { color: var(--danger);   font-weight: 700; }
+.cells-table .diff-neutral{ color: var(--gray);     font-weight: 400; }
+
+.cell-add-row { display: flex; gap: 6px; align-items: center; }
+.cell-add-row input { width: 60px; padding: 5px 7px; border-radius: 6px;
+                      border: 1.5px solid #d1d5db; font-size: 13px; text-align: center; }
+.cell-add-row input:focus { border-color: var(--primary); outline: none; }
+
+.cells-row-ok     { background: #f0fdf4; }
+.cells-row-warn   { background: #fffbeb; }
+.cells-row-danger { background: #fef2f2; }
+.cells-row-empty  { background: #f9fafb; }
+
+.missing-section { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+                   padding: 14px 16px; }
+.missing-title { font-size: 14px; font-weight: 700; color: var(--danger); margin-bottom: 10px; }
+.missing-item { display: flex; align-items: center; gap: 10px; padding: 7px 0;
+                border-bottom: 1px solid #f3f4f6; font-size: 13px; }
+.missing-item:last-child { border-bottom: none; }
+.missing-item .mart { font-weight: 700; color: #374151; min-width: 80px; }
+.missing-item .mname { flex: 1; color: #6b7280; }
+.missing-item .mneeded { font-weight: 700; color: var(--danger); white-space: nowrap; }
+
 /* Comment area */
 .comment-area { margin-top: 12px; border-top: 1px solid #f3f4f6; padding-top: 10px; }
 .comment-area label { font-size: 12px; color: var(--gray); font-weight: 600; display: block; margin-bottom: 4px; }
@@ -213,11 +262,42 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 <div class="actions-bar">
   <button class="btn btn-primary" onclick="loadOrders()">🔄 Оновити</button>
   <button class="btn btn-outline" onclick="loadFromJson()">📂 Завантажити JSON</button>
+  <button class="btn btn-ghost" id="cellsOverviewBtn" onclick="toggleCellsOverview()">📦 Залишки по Коміркам</button>
   <button class="btn btn-ghost" onclick="toggleCompleted()">📋 Виконані</button>
 </div>
 
 <div id="app" class="orders-list">
   <div class="loading">Завантаження замовлень...</div>
+</div>
+
+<div id="cellsOverviewSection" class="cells-overview hidden">
+  <div class="cells-overview-header">
+    <h2>📦 Залишки по Коміркам</h2>
+    <button class="btn btn-outline btn-sm" onclick="loadCellsOverview()">🔄 Оновити</button>
+  </div>
+  <div id="cellsSummary" class="cells-summary"></div>
+  <div class="cells-table-wrap">
+    <table class="cells-table">
+      <thead>
+        <tr>
+          <th class="ch-col">#</th>
+          <th style="width:40px"></th>
+          <th>Артикул / Назва</th>
+          <th class="num-col">В комірці</th>
+          <th class="num-col">Потрібно</th>
+          <th class="num-col">Різниця</th>
+          <th style="min-width:140px">Поповнити</th>
+        </tr>
+      </thead>
+      <tbody id="cellsTableBody">
+        <tr><td colspan="7" style="text-align:center;padding:20px;color:#6b7280">Завантаження...</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div id="missingSection" class="missing-section hidden">
+    <div class="missing-title">⚠️ Товари потрібні в замовленнях, але відсутні в комірках</div>
+    <div id="missingList"></div>
+  </div>
 </div>
 
 <div id="completedSection" class="orders-list hidden">
@@ -923,6 +1003,148 @@ async function confirmRestore() {
   if (!r.ok) { alert('Помилка відновлення'); return; }
   closeAllModals();
   await loadCompletedOrders();
+  await loadOrders();
+}
+
+// ─── Залишки по Коміркам ──────────────────────────────────────────────────────
+
+let cellsOverviewVisible = false;
+
+async function toggleCellsOverview() {
+  cellsOverviewVisible = !cellsOverviewVisible;
+  const sec = document.getElementById('cellsOverviewSection');
+  const btn = document.getElementById('cellsOverviewBtn');
+  sec.classList.toggle('hidden', !cellsOverviewVisible);
+  btn.classList.toggle('btn-primary', cellsOverviewVisible);
+  btn.classList.toggle('btn-ghost', !cellsOverviewVisible);
+  if (cellsOverviewVisible) await loadCellsOverview();
+}
+
+async function loadCellsOverview() {
+  const r = await fetch('/api/cells/overview');
+  const data = await r.json();
+  renderCellsSummary(data.cells);
+  renderCellsTable(data.cells);
+  renderMissing(data.missing);
+}
+
+function renderCellsSummary(cells) {
+  const ok    = cells.filter(c => c.needed === 0 || c.sufficient).length;
+  const warn  = cells.filter(c => c.needed > 0 && !c.sufficient && c.cell_stock > 0).length;
+  const danger = cells.filter(c => c.needed > 0 && c.cell_stock === 0).length;
+  const total = cells.length;
+  document.getElementById('cellsSummary').innerHTML = `
+    <div class="cells-sum-card">
+      <div class="cells-sum-val" style="color:#374151">${total}</div>
+      <div class="cells-sum-label">Всього комірок</div>
+    </div>
+    <div class="cells-sum-card">
+      <div class="cells-sum-val cells-sum-ok">${ok}</div>
+      <div class="cells-sum-label">Вистачає ✅</div>
+    </div>
+    <div class="cells-sum-card">
+      <div class="cells-sum-val cells-sum-warn">${warn}</div>
+      <div class="cells-sum-label">Мало ⚠️</div>
+    </div>
+    <div class="cells-sum-card">
+      <div class="cells-sum-val cells-sum-danger">${danger}</div>
+      <div class="cells-sum-label">Немає 🔴</div>
+    </div>`;
+}
+
+function renderCellsTable(cells) {
+  const tbody = document.getElementById('cellsTableBody');
+  if (!cells.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#6b7280">Комірок не знайдено. Ініціалізуйте товари в Налаштуваннях.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = cells.map(c => {
+    const diff = c.cell_stock - c.needed;
+    let rowClass = 'cells-row-empty';
+    let diffClass = 'diff-neutral';
+    let diffText = '—';
+
+    if (c.needed > 0) {
+      if (diff >= 0) {
+        rowClass = 'cells-row-ok';
+        diffClass = 'diff-ok';
+        diffText = `+${diff}`;
+      } else if (c.cell_stock > 0) {
+        rowClass = 'cells-row-warn';
+        diffClass = 'diff-warn';
+        diffText = `${diff}`;
+      } else {
+        rowClass = 'cells-row-danger';
+        diffClass = 'diff-danger';
+        diffText = `${diff}`;
+      }
+    }
+
+    const photo = c.photo
+      ? `<img src="${c.photo}" style="width:36px;height:36px;border-radius:6px;object-fit:cover" onerror="this.style.display='none'">`
+      : `<div style="width:36px;height:36px;border-radius:6px;background:#e5e7eb;display:flex;align-items:center;justify-content:center;font-size:16px">📦</div>`;
+
+    const stockColor = c.cell_stock === 0 ? 'color:var(--danger)' :
+                       c.cell_stock <= 3  ? 'color:var(--warning)' : 'color:var(--success)';
+
+    return `<tr class="${rowClass}">
+      <td class="ch-col">${c.channel}</td>
+      <td>${photo}</td>
+      <td>
+        <div style="font-weight:700;font-size:13px">${c.articl}</div>
+        <div style="font-size:11px;color:#6b7280">${c.name || '—'}</div>
+      </td>
+      <td class="num-col" style="${stockColor}">${c.cell_stock}</td>
+      <td class="num-col" style="color:${c.needed > 0 ? '#1f2937' : '#9ca3af'}">${c.needed || '—'}</td>
+      <td class="num-col ${diffClass}">${diffText}</td>
+      <td>
+        <div class="cell-add-row">
+          <input type="number" id="addStock_${c.channel}" min="1" placeholder="кількість"
+            onkeydown="if(event.key==='Enter') addCellStock(${c.product_id}, ${c.channel})">
+          <button class="btn btn-success btn-sm"
+            onclick="addCellStock(${c.product_id}, ${c.channel})">➕ Додати</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function renderMissing(missing) {
+  const sec = document.getElementById('missingSection');
+  if (!missing.length) {
+    sec.classList.add('hidden');
+    return;
+  }
+  sec.classList.remove('hidden');
+  document.getElementById('missingList').innerHTML = missing.map(m => `
+    <div class="missing-item">
+      <span class="mart">${m.articl}</span>
+      <span class="mname">${m.name}</span>
+      <span class="mneeded">потрібно: ${m.needed} шт</span>
+    </div>`).join('');
+}
+
+async function addCellStock(productId, channel) {
+  const input = document.getElementById(`addStock_${channel}`);
+  const qty = parseInt(input ? input.value : 0);
+  if (!qty || qty <= 0) {
+    input && input.focus();
+    return;
+  }
+  const r = await fetch('/api/products/restock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product_id: productId, quantity: qty })
+  });
+  if (!r.ok) {
+    const e = await r.json();
+    alert(e.error || 'Помилка');
+    return;
+  }
+  input.value = '';
+  await loadCellsOverview();
+  // Також оновлюємо активні замовлення щоб кнопки відобразились актуально
   await loadOrders();
 }
 
