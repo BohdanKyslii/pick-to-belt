@@ -193,9 +193,51 @@ def confirm_manual(order_id):
         item = OrderItem.query.get(item_id)
         if item:
             item.status = "done"
+            # Виставляємо повну кількість — оператор поклав з запасів складу
+            # cell_stock НЕ змінюємо, бо товар не з комірки
+            item.quantity_picked = item.quantity_ordered
             db.session.commit()
 
     return jsonify({"ok": True})
+
+
+@bp.route("/api/orders/<int:order_id>/release_servo_item", methods=["POST"])
+def release_servo_item(order_id):
+    """Видати конкретну позицію через серво (кнопка 'Конвеєр' для ручних позицій)."""
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    item_id = data.get("item_id")
+    item = next((i for i in order.items if i.id == item_id), None)
+    if not item:
+        return jsonify({"error": "Позицію не знайдено"}), 404
+
+    product = Product.query.filter_by(articl=item.articl, is_active=True).first()
+    if not product:
+        return jsonify({"error": "Товар не знайдено в системі"}), 404
+
+    has_cell = product.servo_board == 0x40 and 0 <= product.servo_channel <= 15
+    if not has_cell:
+        return jsonify({"error": "Товар не прив'язаний до комірки"}), 400
+
+    need = item.quantity_ordered - item.quantity_picked
+    if need <= 0:
+        return jsonify({"error": "Товар вже зібраний"}), 400
+
+    available = product.cell_stock
+    if available <= 0:
+        return jsonify({"error": "Комірка порожня"}), 400
+
+    pick_count = min(need, available)
+    servo.release_multiple(product.servo_board, product.servo_channel, pick_count)
+
+    product.cell_stock -= pick_count
+    item.quantity_picked += pick_count
+    item.status = "done" if item.quantity_picked >= item.quantity_ordered else "partial"
+
+    log = StockLog(articl=item.articl, order_id=order.order_id, quantity=pick_count)
+    db.session.add(log)
+    db.session.commit()
+    return jsonify({"ok": True, "picked": pick_count})
 
 
 @bp.route("/api/orders/<int:order_id>/packed", methods=["POST"])

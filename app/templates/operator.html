@@ -804,13 +804,20 @@ function renderItemRow(item, order, isPicking) {
   let confirmRow = '';
   if (isPicking && (item.status === 'manual' || item.status === 'partial')) {
     const need = item.quantity_ordered - item.quantity_picked;
-    const label = item.status === 'partial' ? `Доклади ${need} шт` : `${item.quantity_ordered} шт з полиці`;
+    const label = item.status === 'partial' ? `Доклади ${need} шт` : `${item.quantity_ordered} шт`;
+    // Кнопка "Конвеєр" — якщо є комірка І вистачає залишку
+    const canServo = item.has_servo && item.cell_stock >= need;
+    const servoBtn = canServo
+      ? `<button class="btn btn-primary btn-sm"
+           onclick="releaseServoItem(${item.id}, ${order.id})">🏭 Конвеєр (${need} шт)</button>`
+      : '';
     confirmRow = `<tr>
       <td colspan="6" style="padding:0 8px 8px 52px">
         <div class="confirm-btn-row">
+          ${servoBtn}
           <button class="btn btn-success btn-sm"
             onclick="showManual(${item.id}, '${item.articl}', '${(item.name||'').replace(/'/g,"\\'")}', ${need}, ${order.id})">
-            ✅ Поклав (${label})</button>
+            ✅ Поклав (${label} зі складу)</button>
           <button class="btn btn-danger btn-sm"
             onclick="markAbsent(${item.id}, ${order.id})">❌ Товар відсутній</button>
         </div>
@@ -933,6 +940,17 @@ function showManual(itemId, articl, name, qty, orderId) {
   document.getElementById('manualModalText').innerHTML =
     `Артикул <strong>${articl}</strong> — «${name}»<br>Покладіть <strong>${qty} шт</strong> вручну в коробку.`;
   document.getElementById('manualModal').classList.remove('hidden');
+}
+
+async function releaseServoItem(itemId, orderId) {
+  const r = await fetch(`/api/orders/${orderId}/release_servo_item`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ item_id: itemId })
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Помилка серво'); return; }
+  await loadOrders();
 }
 
 async function markAbsent(itemId, orderId) {
