@@ -436,6 +436,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   </div>
 </div>
 
+<!-- Modal: нестача товарів при комплектації -->
+<div id="stockIssueModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>⚠️ Нестача товарів</h3>
+    <p style="font-size:13px;color:#374151;margin-bottom:8px">
+      Деяких товарів недостатньо для повної комплектації:
+    </p>
+    <ul id="stockIssueList" style="font-size:13px;color:#dc2626;padding-left:18px;margin-bottom:14px;line-height:1.7"></ul>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="confirmPickWithManual()">🚀 Комплектуємо, доложимо вручну</button>
+      <button class="btn btn-warning" onclick="openRestockFromStockModal()">📦 Поповнити товари</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: відновити замовлення -->
 <div id="restoreModal" class="modal-overlay hidden">
   <div class="modal">
@@ -633,27 +649,19 @@ function renderOrder(o) {
   // Action buttons
   let actions = '';
   if (o.status === 'pending') {
-    if (stockIssues.length) {
-      actions = `<div class="action-area">
-        <button class="btn btn-warning" style="width:100%"
-          onclick="openRestockModal(${o.id}, event)">📦 Поповнити товари</button>
-        <div class="action-row">
-          <button class="btn btn-primary" style="flex:1"
-            onclick="startOrderWithCheck(${o.id})">🚀 Комплектація</button>
-          <button class="btn btn-outline" style="flex:1"
-            onclick="startOrder(${o.id})">✋ Зібрати, доложимо вручну</button>
-        </div>
-      </div>`;
-    } else {
-      actions = `<div class="action-area">
-        <div class="action-row">
-          <button class="btn btn-primary" style="flex:2;padding:13px"
-            onclick="startOrder(${o.id})">🚀 Комплектація</button>
-          <button class="btn btn-outline" style="flex:1"
-            onclick="startOrder(${o.id})">✋ Зібрати, доложимо вручну</button>
-        </div>
-      </div>`;
-    }
+    const restockRow = stockIssues.length
+      ? `<button class="btn btn-warning" style="width:100%"
+           onclick="openRestockModal(${o.id}, event)">📦 Поповнити товари</button>`
+      : '';
+    actions = `<div class="action-area">
+      ${restockRow}
+      <div class="action-row">
+        <button class="btn btn-primary" style="flex:2;padding:13px"
+          onclick="startOrderWithCheck(${o.id})">🚀 Комплектація</button>
+        <button class="btn btn-outline" style="flex:1"
+          onclick="openAddItemModal(${o.id}, event)">➕ Додати товар</button>
+      </div>
+    </div>`;
   } else if (o.status === 'picking') {
     const allDone = o.items.every(i => i.status === 'done');
     actions = `<div class="action-area">
@@ -836,14 +844,26 @@ async function startOrder(orderId) {
 async function startOrderWithCheck(orderId) {
   const order = orders.find(o => o.id === orderId);
   if (order && getStockIssues(order).length > 0) {
-    const ok = confirm(
-      'Деякі товари мають нестачу.\n\n' +
-      'Натисніть OK щоб розпочати комплектацію (бракуючі позиції будуть вручну).\n' +
-      'Натисніть Скасувати щоб спочатку поповнити товари.'
-    );
-    if (!ok) return;
+    currentOrderDbId = orderId;
+    const issues = getStockIssues(order);
+    document.getElementById('stockIssueList').innerHTML = issues.map(i =>
+      `<li><strong>${i.articl}</strong> — ${i.name}: є ${i.cell_stock} шт, потрібно ${i.quantity_ordered} шт</li>`
+    ).join('');
+    document.getElementById('stockIssueModal').classList.remove('hidden');
+    return;
   }
   await startOrder(orderId);
+}
+
+async function confirmPickWithManual() {
+  closeAllModals();
+  await startOrder(currentOrderDbId);
+}
+
+function openRestockFromStockModal() {
+  const orderId = currentOrderDbId;
+  closeAllModals();
+  openRestockModal(orderId, { stopPropagation: () => {} });
 }
 
 async function packOrder(orderId) {
