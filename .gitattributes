@@ -1,0 +1,31 @@
+# Всі текстові файли — LF (Linux/Docker)
+* text=auto eol=lf
+
+# Python
+*.py text eol=lf
+
+# Web
+*.html text eol=lf
+*.css  text eol=lf
+*.js   text eol=lf
+*.json text eol=lf
+
+# Config
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.cfg  text eol=lf
+*.ini  text eol=lf
+*.txt  text eol=lf
+*.md   text eol=lf
+Dockerfile text eol=lf
+.gitignore text eol=lf
+
+# Бінарні — без перетворення
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.db   binary
