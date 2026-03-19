@@ -56,9 +56,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .order-card.done    { opacity: .6; }
 
 .order-header { padding: 12px 16px; display: flex; align-items: center;
-                justify-content: space-between; border-radius: var(--radius); }
-.order-header-left { cursor: pointer; flex: 1; min-width: 0; }
+                justify-content: space-between; border-radius: var(--radius);
+                cursor: pointer; user-select: none; }
+.order-header:hover { background: #f9fafb; }
+.order-header-left { flex: 1; min-width: 0; }
 .order-title { font-size: 16px; font-weight: 700; }
+.order-date  { font-size: 13px; color: var(--gray); font-weight: 400; margin-left: 6px; }
 .order-meta  { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .order-header-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
@@ -70,7 +73,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .order-body { padding: 0 16px 16px; }
 
 .box-recommend { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
-                 padding: 10px 14px; margin-bottom: 12px; font-size: 14px; }
+                 padding: 10px 14px; margin-bottom: 8px; font-size: 14px; }
 .box-recommend strong { color: var(--primary); }
 .box-selector label { font-size: 13px; color: var(--gray); display: block; margin-bottom: 4px; }
 .box-selector select { width: 100%; padding: 8px 12px; border-radius: 8px;
@@ -115,6 +118,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .action-area { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
 .action-row  { display: flex; gap: 8px; }
 
+/* Comment area */
+.comment-area { margin-top: 12px; border-top: 1px solid #f3f4f6; padding-top: 10px; }
+.comment-area label { font-size: 12px; color: var(--gray); font-weight: 600; display: block; margin-bottom: 4px; }
+.comment-area textarea { width: 100%; padding: 8px 10px; border-radius: 8px;
+                          border: 1.5px solid #d1d5db; font-size: 13px; resize: vertical;
+                          font-family: inherit; min-height: 50px; }
+.comment-area textarea:focus { border-color: var(--primary); outline: none; }
+.comment-save-row { display: flex; justify-content: flex-end; margin-top: 4px; }
+
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5);
                  z-index: 200; display: flex; align-items: center; justify-content: center;
@@ -146,6 +158,25 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .restock-item input { width: 70px; padding: 6px 8px; border-radius: 6px;
                        border: 1.5px solid #d1d5db; text-align: center; font-size: 14px; }
 
+/* Restock by articl */
+.restock-manual { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px;
+                  padding: 12px; margin-top: 12px; }
+.restock-manual-title { font-size: 13px; font-weight: 700; color: #15803d; margin-bottom: 8px; }
+.restock-manual-row { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.restock-manual-row .fg { flex: 1; min-width: 100px; }
+.restock-manual-row label { font-size: 11px; color: var(--gray); display: block; margin-bottom: 3px; }
+.restock-manual-row input { width: 100%; padding: 7px 10px; border-radius: 7px;
+                             border: 1.5px solid #d1d5db; font-size: 14px; }
+
+/* Add item modal */
+.form-group { margin-bottom: 10px; }
+.form-group label { display: block; font-size: 12px; color: var(--gray);
+                    margin-bottom: 3px; font-weight: 600; }
+.form-group input, .form-group textarea {
+  width: 100%; padding: 8px 10px; border-radius: 8px;
+  border: 1.5px solid #d1d5db; font-size: 14px; font-family: inherit; outline: none; }
+.form-group input:focus, .form-group textarea:focus { border-color: var(--primary); }
+
 /* Conveyor */
 @keyframes conveyor { 0%{background-position:0 0} 100%{background-position:40px 0} }
 .conveyor-active { background: repeating-linear-gradient(
@@ -160,6 +191,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 font-size: 11px; color: #78350f; margin-top: 3px; display: inline-block; }
 .comment-note { background: #dbeafe; padding: 4px 8px; border-radius: 6px;
                 font-size: 11px; color: #1e3a8a; margin-top: 3px; display: inline-block; }
+.extra-comment-note { background: #fce7f3; padding: 4px 8px; border-radius: 6px;
+                font-size: 11px; color: #9d174d; margin-top: 3px; display: inline-block; }
 
 .confirm-btn-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 </style>
@@ -223,9 +256,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       Вкажіть нову кількість для товарів з нестачею:
     </p>
     <div id="restockItems"></div>
+
+    <!-- Поповнення будь-якого товару за артикулом -->
+    <div class="restock-manual">
+      <div class="restock-manual-title">📥 Поповнити конкретну комірку</div>
+      <div class="restock-manual-row">
+        <div class="fg">
+          <label>Артикул</label>
+          <input type="text" id="restockArticl" placeholder="напр. 30770">
+        </div>
+        <div class="fg" style="max-width:90px">
+          <label>Кількість</label>
+          <input type="number" id="restockQty" min="1" value="1">
+        </div>
+        <button class="btn btn-success btn-sm" onclick="restockByArticl()" style="flex-shrink:0">
+          ✅ Поповнити
+        </button>
+      </div>
+      <div id="restockByArticlMsg" style="font-size:12px;margin-top:6px"></div>
+    </div>
+
     <div class="modal-actions">
       <button class="btn btn-success" onclick="saveRestock()">💾 Зберегти залишки</button>
-      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Закрити</button>
     </div>
   </div>
 </div>
@@ -242,14 +295,55 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   </div>
 </div>
 
+<!-- Modal: додати товар до замовлення (заміна) -->
+<div id="addItemModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>➕ Додати товар до замовлення</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:10px">
+      Для заміни, браку або доповнення. Коментар обов'язковий.
+    </p>
+    <div class="form-group">
+      <label>Артикул *</label>
+      <input id="addItemArticl" type="text" placeholder="напр. 30770">
+    </div>
+    <div class="form-group">
+      <label>Кількість *</label>
+      <input id="addItemQty" type="number" min="1" value="1">
+    </div>
+    <div class="form-group">
+      <label>Коментар — причина додавання *</label>
+      <textarea id="addItemComment" rows="3" placeholder="напр. Заміна браку арт. 12345"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="confirmAddItem()">✅ Додати</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: відновити замовлення -->
+<div id="restoreModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>🔄 Відновити замовлення?</h3>
+    <p id="restoreModalText"></p>
+    <div class="modal-actions">
+      <button class="btn btn-warning" onclick="confirmRestore()">🔄 Відновити</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let orders = [];
 let boxes = [];
 let currentManualItemId = null;
 let currentOrderDbId = null;
 let currentDeleteOrderId = null;
+let currentRestoreOrderId = null;
 let restockItems = [];
 let completedVisible = false;
+// Зберігаємо стан відкритих замовлень між ре-рендерами
+const openOrders = new Set();
 
 async function init() {
   await loadBoxes();
@@ -325,7 +419,12 @@ function recommendBox(items) {
   for (const box of sorted) {
     const fill = (box.max_fill_pct || 80) / 100;
     const usable = (box.length / 10) * (box.width / 10) * (box.height / 10) * fill;
-    if (usable >= totalVol) return { box, fillPct: Math.round((totalVol / ((box.length/10)*(box.width/10)*(box.height/10))) * 100) };
+    if (usable >= totalVol) {
+      return {
+        box,
+        fillPct: Math.round((totalVol / ((box.length/10)*(box.width/10)*(box.height/10))) * 100)
+      };
+    }
   }
   const last = sorted[sorted.length - 1];
   return last ? { box: last, fillPct: null } : null;
@@ -381,13 +480,16 @@ function renderOrder(o) {
   let boxSection = '';
   if (o.status === 'pending') {
     const rec = recommendBox(o.items);
-    const recHtml = rec
+    const recBoxId = rec ? rec.box.id : null;
+    const recInfoHtml = rec
       ? `<div class="box-recommend">📦 Рекомендована коробка: <strong>${rec.box.name}</strong>${rec.fillPct ? ` (заповн. ~${rec.fillPct}%)` : ''}</div>`
       : '';
-    const opts = boxes.map(b => `<option value="${b.id}">${b.name}</option>`).join('');
-    boxSection = `${recHtml}
+    const opts = boxes.map(b =>
+      `<option value="${b.id}"${b.id === recBoxId ? ' selected' : ''}>${b.name}</option>`
+    ).join('');
+    boxSection = `${recInfoHtml}
       <div class="box-selector">
-        <label>Оберіть коробку:</label>
+        <label>Рекомендована коробка:</label>
         <select id="box_${o.id}">${opts || '<option>Немає коробок</option>'}</select>
       </div>`;
   } else if (o.box) {
@@ -420,31 +522,49 @@ function renderOrder(o) {
   } else if (o.status === 'picking') {
     const allDone = o.items.every(i => i.status === 'done');
     actions = `<div class="action-area">
-      <button class="btn btn-success" style="padding:13px" ${!allDone ? 'disabled' : ''}
-        onclick="packOrder(${o.id})">✅ Запаковано</button>
+      <div class="action-row">
+        <button class="btn btn-success" style="flex:1;padding:13px" ${!allDone ? 'disabled' : ''}
+          onclick="packOrder(${o.id})">✅ Запаковано</button>
+        <button class="btn btn-outline btn-sm"
+          onclick="openAddItemModal(${o.id}, event)">➕ Додати товар</button>
+      </div>
       ${!allDone ? '<p style="text-align:center;color:#6b7280;font-size:12px">Підтвердіть усі ручні позиції</p>' : ''}
     </div>`;
   }
 
-  const isOpen = o.status === 'picking' ? '' : 'style="display:none"';
+  // Comment section
+  const commentVal = (o.comment || '').replace(/"/g, '&quot;');
+  const commentSection = `<div class="comment-area">
+    <label>💬 Коментар до замовлення</label>
+    <textarea id="comment_${o.id}" rows="2" placeholder="Додати коментар...">${commentVal}</textarea>
+    <div class="comment-save-row">
+      <button class="btn btn-outline btn-sm" onclick="saveOrderComment(${o.id}, event)">Зберегти коментар</button>
+    </div>
+  </div>`;
 
+  // Body open/closed state
+  const isBodyOpen = o.status === 'picking' || openOrders.has(o.id);
+  const bodyStyle = isBodyOpen ? '' : 'style="display:none"';
+
+  // Header click handler (stop propagation for buttons inside header)
   return `<div class="order-card ${o.status}" id="order_${o.id}">
-    <div class="order-header">
-      <div class="order-header-left" onclick="toggleOrder(${o.id})">
-        <div class="order-title">🔖 ${o.order_id}</div>
+    <div class="order-header" onclick="toggleOrder(${o.id})">
+      <div class="order-header-left">
+        <div class="order-title">🔖 ${o.order_id}${o.order_date ? `<span class="order-date">від ${o.order_date}</span>` : ''}</div>
         <div class="order-meta">${o.items.length} позицій • ${units} одиниць • ${dateStr}</div>
       </div>
-      <div class="order-header-right">
+      <div class="order-header-right" onclick="event.stopPropagation()">
         <span class="status-badge ${statusClass[o.status] || 'badge-pending'}">${statusLabels[o.status] || o.status}</span>
         ${o.status !== 'picking' ? `<button class="btn btn-ghost" title="Видалити" onclick="askDelete(${o.id}, '${o.order_id}')">🗑️</button>` : ''}
       </div>
     </div>
-    <div class="order-body" id="body_${o.id}" ${isOpen}>
+    <div class="order-body" id="body_${o.id}" ${bodyStyle}>
       ${o.status === 'picking' ? '<div class="conveyor-active">🏭 Конвеєр активний</div>' : ''}
       ${alerts}
       ${boxSection}
       ${itemsHtml}
       ${actions}
+      ${commentSection}
     </div>
   </div>`;
 }
@@ -496,6 +616,8 @@ function renderItemRow(item, order, isPicking) {
     extras += `<span class="sticker-note">🏷️ ${item.sticker_count} стікер: ${item.sticker_note}</span> `;
   if (item.comment)
     extras += `<span class="comment-note">💬 ${item.comment}</span>`;
+  if (item.extra_comment)
+    extras += ` <span class="extra-comment-note">📝 ${item.extra_comment}</span>`;
 
   // Manual confirm buttons
   let confirmRow = '';
@@ -532,14 +654,16 @@ function renderCompletedOrder(o) {
   const dateStr = formatDate(o.packed_at || o.started_at || o.created_at);
   const units = totalUnits(o.items);
   return `<div class="order-card done" style="opacity:.7">
-    <div class="order-header">
-      <div class="order-header-left" onclick="toggleOrder('c${o.id}')">
-        <div class="order-title">✅ ${o.order_id}</div>
+    <div class="order-header" onclick="toggleOrder('c${o.id}')">
+      <div class="order-header-left">
+        <div class="order-title">✅ ${o.order_id}${o.order_date ? `<span class="order-date">від ${o.order_date}</span>` : ''}</div>
         <div class="order-meta">${o.items.length} позицій • ${units} одиниць • ${dateStr}
           ${o.box ? ` • ${o.box.name}` : ''}</div>
       </div>
-      <div class="order-header-right">
+      <div class="order-header-right" onclick="event.stopPropagation()">
         <span class="status-badge badge-done">Виконано</span>
+        <button class="btn btn-outline btn-sm" title="Відновити до комплектування"
+          onclick="askRestore(${o.id}, '${o.order_id}')">🔄 Відновити</button>
       </div>
     </div>
     <div class="order-body" id="body_c${o.id}" style="display:none">
@@ -552,7 +676,15 @@ function renderCompletedOrder(o) {
 
 function toggleOrder(id) {
   const body = document.getElementById(`body_${id}`);
-  if (body) body.style.display = body.style.display === 'none' ? '' : 'none';
+  if (!body) return;
+  const isOpen = body.style.display !== 'none';
+  if (isOpen) {
+    body.style.display = 'none';
+    openOrders.delete(id);
+  } else {
+    body.style.display = '';
+    openOrders.add(id);
+  }
 }
 
 async function startOrder(orderId) {
@@ -615,6 +747,8 @@ function openItemDetail(item) {
     detailRows += `<div class="detail-row"><span class="detail-label">Стікери</span><span class="detail-val">${item.sticker_count} шт — ${item.sticker_note}</span></div>`;
   if (item.comment)
     detailRows += `<div class="detail-row"><span class="detail-label">Коментар</span><span class="detail-val" style="font-weight:400;color:#374151">${item.comment}</span></div>`;
+  if (item.extra_comment)
+    detailRows += `<div class="detail-row"><span class="detail-label">Причина додавання</span><span class="detail-val" style="font-weight:400;color:#9d174d">${item.extra_comment}</span></div>`;
 
   document.getElementById('detailTitle').textContent = item.name || item.articl;
   document.getElementById('detailContent').innerHTML = photo + detailRows;
@@ -639,7 +773,10 @@ function openRestockModal(orderId, event) {
         placeholder="нова кількість" value="${Math.max(item.quantity_ordered, item.cell_stock)}">
     </div>`).join('');
 
-  document.getElementById('restockItems').innerHTML = html || '<p style="color:#6b7280">Немає позицій для поповнення</p>';
+  document.getElementById('restockItems').innerHTML = html || '<p style="color:#6b7280;margin-bottom:8px">Немає позицій для поповнення з нестачею.</p>';
+  document.getElementById('restockArticl').value = '';
+  document.getElementById('restockQty').value = '1';
+  document.getElementById('restockByArticlMsg').textContent = '';
   document.getElementById('restockModal').classList.remove('hidden');
 }
 
@@ -661,6 +798,81 @@ async function saveRestock() {
   await loadOrders();
 }
 
+async function restockByArticl() {
+  const articl = document.getElementById('restockArticl').value.trim();
+  const qty = parseInt(document.getElementById('restockQty').value);
+  const msg = document.getElementById('restockByArticlMsg');
+  if (!articl || isNaN(qty) || qty <= 0) {
+    msg.style.color = '#dc2626';
+    msg.textContent = 'Вкажіть артикул та кількість більше 0';
+    return;
+  }
+  const r = await fetch('/api/products/restock', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ articl, quantity: qty })
+  });
+  const d = await r.json();
+  if (!r.ok) {
+    msg.style.color = '#dc2626';
+    msg.textContent = d.error || 'Помилка';
+    return;
+  }
+  msg.style.color = '#16a34a';
+  msg.textContent = `✅ Поповнено: ${articl} — тепер ${d.cell_stock} шт`;
+  document.getElementById('restockArticl').value = '';
+  document.getElementById('restockQty').value = '1';
+}
+
+// ─── Коментар замовлення ──────────────────────────────────────────────────────
+
+async function saveOrderComment(orderId, event) {
+  event.stopPropagation();
+  const textarea = document.getElementById(`comment_${orderId}`);
+  if (!textarea) return;
+  const comment = textarea.value.trim();
+  const r = await fetch(`/api/orders/${orderId}/comment`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comment })
+  });
+  if (r.ok) {
+    // Оновлюємо локально без повного ре-рендеру
+    const order = orders.find(o => o.id === orderId);
+    if (order) order.comment = comment;
+  }
+}
+
+// ─── Додати товар до замовлення ───────────────────────────────────────────────
+
+function openAddItemModal(orderId, event) {
+  event.stopPropagation();
+  currentOrderDbId = orderId;
+  document.getElementById('addItemArticl').value = '';
+  document.getElementById('addItemQty').value = '1';
+  document.getElementById('addItemComment').value = '';
+  document.getElementById('addItemModal').classList.remove('hidden');
+}
+
+async function confirmAddItem() {
+  const articl = document.getElementById('addItemArticl').value.trim();
+  const qty = parseInt(document.getElementById('addItemQty').value);
+  const comment = document.getElementById('addItemComment').value.trim();
+  if (!articl) { alert('Введіть артикул'); return; }
+  if (!comment) { alert('Коментар обов\'язковий'); return; }
+  if (isNaN(qty) || qty <= 0) { alert('Кількість має бути більше 0'); return; }
+
+  const r = await fetch(`/api/orders/${currentOrderDbId}/add_item`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ articl, quantity: qty, comment })
+  });
+  const d = await r.json();
+  if (!r.ok) { alert(d.error || 'Помилка'); return; }
+  closeAllModals();
+  await loadOrders();
+}
+
 // ─── Видалення замовлення ─────────────────────────────────────────────────────
 
 function askDelete(orderId, orderCode) {
@@ -676,12 +888,32 @@ async function confirmDelete() {
   await loadOrders();
 }
 
+// ─── Відновлення замовлення ───────────────────────────────────────────────────
+
+function askRestore(orderId, orderCode) {
+  currentRestoreOrderId = orderId;
+  document.getElementById('restoreModalText').innerHTML =
+    `Відновити замовлення <strong>${orderCode}</strong> до стану «Очікує»?<br>
+     <span style="font-size:12px;color:#6b7280">Всі позиції будуть скинуті до початкового стану. Залишки не відновлюються.</span>`;
+  document.getElementById('restoreModal').classList.remove('hidden');
+}
+
+async function confirmRestore() {
+  if (!currentRestoreOrderId) return;
+  const r = await fetch(`/api/orders/${currentRestoreOrderId}/restore`, { method: 'POST' });
+  if (!r.ok) { alert('Помилка відновлення'); return; }
+  closeAllModals();
+  await loadCompletedOrders();
+  await loadOrders();
+}
+
 // ─── Утиліти ──────────────────────────────────────────────────────────────────
 
 function closeAllModals() {
   document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
   currentManualItemId = null;
   currentDeleteOrderId = null;
+  currentRestoreOrderId = null;
   restockItems = [];
 }
 

@@ -1,6 +1,7 @@
 [
   {
     "order_id": "РБН00010210",
+    "order_date": "10.03.2024",
     "items": [
       {"articl": "30770", "quantity": 1},
       {"articl": "36403", "quantity": 2},
@@ -10,12 +11,14 @@
   },
   {
     "order_id": "РБН00010209",
+    "order_date": "08.03.2024",
     "items": [
       {"articl": "45031", "quantity": 3}
     ]
   },
   {
     "order_id": "РБН00010208",
+    "order_date": "24.02.2024",
     "items": [
       {"articl": "30770", "quantity": 1},
       {"articl": "36401", "quantity": 2},
@@ -25,6 +28,7 @@
   },
   {
     "order_id": "РБН00010207",
+    "order_date": "20.02.2024",
     "items": [
       {"articl": "45031", "quantity": 2},
       {"articl": "45742", "quantity": 12}
@@ -32,6 +36,7 @@
   },
   {
     "order_id": "РБН00010206",
+    "order_date": "15.02.2024",
     "items": [
       {"articl": "21411", "quantity": 3},
       {"articl": "20980", "quantity": 3},
@@ -40,6 +45,7 @@
   },
   {
     "order_id": "РБН00010205",
+    "order_date": "10.02.2024",
     "items": [
       {"articl": "41276", "quantity": 2},
       {"articl": "41278", "quantity": 1},

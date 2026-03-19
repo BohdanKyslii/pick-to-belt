@@ -59,6 +59,23 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .cell-thumb { width:100%;height:60px;object-fit:cover;border-radius:6px;
               margin-top:6px;display:block; }
 
+/* Catalog products list */
+.catalog-list { display:flex;flex-direction:column;gap:8px; }
+.catalog-card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+                padding:12px 16px;display:flex;align-items:center;gap:12px; }
+.catalog-thumb { width:48px;height:48px;border-radius:8px;object-fit:cover;flex-shrink:0;
+                 background:#e5e7eb;display:flex;align-items:center;justify-content:center;
+                 font-size:20px; }
+.catalog-thumb img { width:100%;height:100%;border-radius:8px;object-fit:cover; }
+.catalog-info { flex:1;min-width:0; }
+.catalog-art  { font-size:13px;font-weight:700; }
+.catalog-name { font-size:12px;color:var(--gray);margin-top:1px; }
+.catalog-dims { font-size:11px;color:#9ca3af;margin-top:2px; }
+.catalog-cell-badge { font-size:11px;padding:2px 8px;border-radius:12px;font-weight:600; }
+.badge-in-cell { background:#d1fae5;color:#065f46; }
+.badge-no-cell { background:#f3f4f6;color:#6b7280; }
+.catalog-actions { display:flex;gap:6px;flex-shrink:0; }
+
 /* Tab */
 .tab-bar { display:flex;gap:4px;margin-bottom:16px; }
 .tab { padding:8px 16px;border-radius:8px;cursor:pointer;font-size:14px;
@@ -89,7 +106,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .form-group label { display:block;font-size:12px;color:var(--gray);margin-bottom:3px;font-weight:600; }
 .form-group input,.form-group textarea,.form-group select {
   width:100%;padding:8px 10px;border-radius:8px;border:1.5px solid #d1d5db;
-  font-size:14px;outline:none; }
+  font-size:14px;outline:none;font-family:inherit; }
 .form-group input:focus,.form-group textarea:focus { border-color:var(--primary); }
 .form-row   { display:grid;grid-template-columns:1fr 1fr;gap:8px; }
 .form-row-3 { display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px; }
@@ -111,6 +128,13 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .articl-status { font-size:11px;margin-top:3px; }
 .articl-found { color:var(--success); }
 .articl-new   { color:var(--warning); }
+
+/* Search bar */
+.search-bar { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
+              padding:10px 14px;margin-bottom:12px;display:flex;gap:8px;align-items:center; }
+.search-bar input { flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid #d1d5db;
+                    font-size:14px;outline:none; }
+.search-bar input:focus { border-color:var(--primary); }
 </style>
 </head>
 <body>
@@ -123,18 +147,31 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 </div>
 <div class="container">
   <div class="tab-bar">
-    <button class="tab active" onclick="showTab('products', event)">🔧 Товари (16 слотів)</button>
+    <button class="tab active" onclick="showTab('cells', event)">🔧 Комірки</button>
+    <button class="tab" onclick="showTab('catalog', event)">📋 Товари</button>
     <button class="tab" onclick="showTab('boxes', event)">📦 Коробки</button>
   </div>
 
-  <!-- Products tab -->
-  <div id="tab-products" class="tab-content active">
+  <!-- Cells tab (колишній "Товари 16 слотів") -->
+  <div id="tab-cells" class="tab-content active">
     <div class="actions-bar">
       <button class="btn btn-outline" onclick="initProducts()">🚀 Ініціалізувати 16 товарів</button>
       <button class="btn btn-outline" onclick="initBoxes()">📦 Додати стандартні коробки</button>
     </div>
     <div class="section-title">Комірки серводвигунів (Плата 0x40)</div>
     <div class="grid-16" id="cellsGrid"></div>
+  </div>
+
+  <!-- Catalog tab — всі товари -->
+  <div id="tab-catalog" class="tab-content">
+    <div class="actions-bar">
+      <button class="btn btn-primary" onclick="openCatalogModal(null)">+ Новий товар</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="catalogSearch" placeholder="Пошук за артикулом або назвою..."
+        oninput="renderCatalog()">
+    </div>
+    <div class="catalog-list" id="catalogList"></div>
   </div>
 
   <!-- Boxes tab -->
@@ -146,14 +183,13 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   </div>
 </div>
 
-<!-- Product Modal -->
+<!-- Product Modal (комірки) -->
 <div id="productModal" class="modal-overlay hidden">
   <div class="modal">
     <h3 id="modalTitle">Комірка</h3>
     <input type="hidden" id="editId">
     <input type="hidden" id="editChannel">
 
-    <!-- Articl lookup -->
     <div class="form-group">
       <label>Артикул *</label>
       <div class="articl-row">
@@ -162,13 +198,10 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       </div>
       <div id="artStatus" class="articl-status"></div>
     </div>
-
     <div class="form-group">
       <label>Назва товару</label>
       <input id="fName" placeholder="наприклад: Кабель USB-C 1м">
     </div>
-
-    <!-- Photo -->
     <div class="form-group">
       <label>Фото товару</label>
       <div class="photo-area">
@@ -177,9 +210,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       </div>
       <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this)">
     </div>
-
     <hr class="modal-divider">
-
     <div class="form-row">
       <div class="form-group">
         <label>Місткість комірки (шт)</label>
@@ -190,7 +221,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
         <input id="fStock" type="number" value="0" min="0">
       </div>
     </div>
-
     <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри товару (см)</div>
     <div class="form-row-3">
       <div class="form-group"><label>Довжина</label><input id="fLength" type="number" step="0.1" value="0"></div>
@@ -201,9 +231,7 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       <label>Вага (г)</label>
       <input id="fWeight" type="number" step="1" value="0">
     </div>
-
     <hr class="modal-divider">
-
     <div class="form-row">
       <div class="form-group">
         <label>К-сть стікерів (0 = не потрібно)</label>
@@ -218,11 +246,61 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       <label>Коментар для оператора</label>
       <textarea id="fComment" rows="2" placeholder="Додаткові інструкції..."></textarea>
     </div>
-
     <div class="modal-actions">
       <button class="btn btn-success" onclick="saveProduct()">💾 Зберегти</button>
       <button id="clearCellBtn" class="btn btn-danger hidden" onclick="clearCell()">🗑️ Очистити комірку</button>
       <button class="btn btn-outline" onclick="closeModal()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Catalog Product Modal -->
+<div id="catalogModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="catalogModalTitle">Новий товар</h3>
+    <input type="hidden" id="cEditId">
+    <div class="form-group">
+      <label>Артикул *</label>
+      <input id="cArticl" placeholder="Введіть артикул">
+    </div>
+    <div class="form-group">
+      <label>Назва товару</label>
+      <input id="cName" placeholder="наприклад: Кабель USB-C 1м">
+    </div>
+    <hr class="modal-divider">
+    <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри (см)</div>
+    <div class="form-row-3">
+      <div class="form-group"><label>Довжина</label><input id="cLength" type="number" step="0.1" value="0"></div>
+      <div class="form-group"><label>Ширина</label><input id="cWidth"  type="number" step="0.1" value="0"></div>
+      <div class="form-group"><label>Висота</label><input id="cHeight" type="number" step="0.1" value="0"></div>
+    </div>
+    <div class="form-group">
+      <label>Вага (г)</label>
+      <input id="cWeight" type="number" step="1" value="0">
+    </div>
+    <hr class="modal-divider">
+    <div class="form-row">
+      <div class="form-group">
+        <label>К-сть стікерів</label>
+        <input id="cStickerCount" type="number" value="0" min="0">
+      </div>
+      <div class="form-group">
+        <label>Опис стікера</label>
+        <input id="cStickerNote" placeholder="наприклад: EAC">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Коментар для оператора</label>
+      <textarea id="cComment" rows="2" placeholder="Додаткові інструкції..."></textarea>
+    </div>
+    <div class="form-group" id="cAssignCellGroup">
+      <label>Призначити до комірки (канал 0–15, залиште порожнім для «без комірки»)</label>
+      <input id="cChannel" type="number" min="0" max="15" placeholder="напр. 3">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="saveCatalogProduct()">💾 Зберегти</button>
+      <button id="catalogDeleteBtn" class="btn btn-danger hidden" onclick="deleteCatalogProduct()">🗑️ Видалити</button>
+      <button class="btn btn-outline" onclick="closeCatalogModal()">Скасувати</button>
     </div>
   </div>
 </div>
@@ -262,14 +340,17 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 <script>
 let products = [];
 let boxes = [];
-let currentProductId = null;  // для видалення фото
+let allProducts = [];
+let currentProductId = null;
+let currentCatalogProductId = null;
 
 async function init() {
   await loadProducts();
+  await loadAllProducts();
   await loadBoxes();
 }
 
-// ─── Товари ───────────────────────────────────────────────────────────────────
+// ─── Комірки (16 слотів) ─────────────────────────────────────────────────────
 
 async function loadProducts() {
   const r = await fetch('/api/products');
@@ -327,7 +408,6 @@ function openProductModal(product, channel) {
   document.getElementById('fName').value = product ? product.name : '';
   document.getElementById('fCapacity').value = product ? product.cell_capacity : 20;
   document.getElementById('fStock').value = product ? product.cell_stock : 0;
-  // Конвертуємо мм → см для відображення
   document.getElementById('fLength').value = product ? (product.length / 10).toFixed(1) : 0;
   document.getElementById('fWidth').value  = product ? (product.width  / 10).toFixed(1) : 0;
   document.getElementById('fHeight').value = product ? (product.height / 10).toFixed(1) : 0;
@@ -338,7 +418,6 @@ function openProductModal(product, channel) {
   document.getElementById('artStatus').textContent = '';
   document.getElementById('fPhoto').value = '';
 
-  // Photo preview
   const prevDiv = document.getElementById('photoPreview');
   const delBtn  = document.getElementById('photoDelBtn');
   if (product && product.photo) {
@@ -354,25 +433,20 @@ function openProductModal(product, channel) {
   document.getElementById('productModal').classList.remove('hidden');
 }
 
-// Пошук артикулу в базі при виході з поля
 async function lookupArticl() {
   const val = document.getElementById('fArticl').value.trim();
   const status = document.getElementById('artStatus');
   if (!val) { status.textContent = ''; return; }
 
-  // Не перезаписуємо дані якщо вже є id (редагуємо існуючий)
   const existingId = document.getElementById('editId').value;
-
   const r = await fetch(`/api/products/by_articl?q=${encodeURIComponent(val)}`);
   if (r.ok) {
     const p = await r.json();
-    // Якщо це інший товар (інший id), попередити
     if (existingId && String(p.id) !== existingId) {
       status.innerHTML = `<span style="color:var(--danger)">⚠️ Артикул вже зайнятий іншою коміркою (канал ${p.servo_channel})</span>`;
       return;
     }
     if (!existingId) {
-      // Автозаповнення для нового товару
       document.getElementById('fName').value = p.name || '';
       document.getElementById('fCapacity').value = p.cell_capacity;
       document.getElementById('fStock').value = p.cell_stock;
@@ -404,7 +478,6 @@ function previewPhoto(input) {
 
 async function deletePhoto() {
   if (!currentProductId) {
-    // Просто очищаємо превью (товар ще не збережений)
     document.getElementById('fPhoto').value = '';
     document.getElementById('photoPreview').innerHTML = '<span style="font-size:30px">📦</span>';
     document.getElementById('photoPreview').className = 'photo-placeholder';
@@ -432,7 +505,6 @@ async function saveProduct() {
     servo_channel: channel,
     cell_capacity: parseInt(document.getElementById('fCapacity').value) || 10,
     cell_stock:    parseInt(document.getElementById('fStock').value)    || 0,
-    // Конвертуємо см → мм для збереження
     length: parseFloat(document.getElementById('fLength').value) * 10 || 0,
     width:  parseFloat(document.getElementById('fWidth').value)  * 10 || 0,
     height: parseFloat(document.getElementById('fHeight').value) * 10 || 0,
@@ -467,6 +539,7 @@ async function saveProduct() {
 
   closeModal();
   await loadProducts();
+  await loadAllProducts();
 }
 
 async function clearCell() {
@@ -476,6 +549,7 @@ async function clearCell() {
   await fetch(`/api/products/${id}`, { method: 'DELETE' });
   closeModal();
   await loadProducts();
+  await loadAllProducts();
 }
 
 async function initProducts() {
@@ -483,6 +557,170 @@ async function initProducts() {
   const d = await r.json();
   alert(`Ініціалізовано ${d.added} товарів`);
   await loadProducts();
+  await loadAllProducts();
+}
+
+// ─── Каталог товарів ──────────────────────────────────────────────────────────
+
+async function loadAllProducts() {
+  const r = await fetch('/api/products/all');
+  allProducts = await r.json();
+  renderCatalog();
+}
+
+function renderCatalog() {
+  const search = (document.getElementById('catalogSearch').value || '').toLowerCase();
+  const list = document.getElementById('catalogList');
+  let filtered = allProducts;
+  if (search) {
+    filtered = allProducts.filter(p =>
+      p.articl.toLowerCase().includes(search) ||
+      (p.name || '').toLowerCase().includes(search)
+    );
+  }
+  if (!filtered.length) {
+    list.innerHTML = '<div style="color:#6b7280;text-align:center;padding:20px">Товарів не знайдено</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(p => renderCatalogCard(p)).join('');
+}
+
+function renderCatalogCard(p) {
+  const inCell = p.servo_board === '0x40' && p.servo_channel >= 0 && p.servo_channel <= 15;
+  const cellBadge = inCell
+    ? `<span class="catalog-cell-badge badge-in-cell">Комірка ${p.servo_channel}</span>`
+    : `<span class="catalog-cell-badge badge-no-cell">Без комірки</span>`;
+  const dimsText = (p.length && p.width && p.height)
+    ? `${(p.length/10).toFixed(1)}×${(p.width/10).toFixed(1)}×${(p.height/10).toFixed(1)} см`
+    : '';
+  const thumb = p.photo
+    ? `<div class="catalog-thumb"><img src="${p.photo}" onerror="this.style.display='none'"></div>`
+    : `<div class="catalog-thumb">📦</div>`;
+
+  return `<div class="catalog-card">
+    ${thumb}
+    <div class="catalog-info">
+      <div class="catalog-art">${p.articl} ${cellBadge}</div>
+      <div class="catalog-name">${p.name || '—'}</div>
+      ${dimsText ? `<div class="catalog-dims">${dimsText}</div>` : ''}
+    </div>
+    <div class="catalog-actions">
+      <button class="btn btn-outline btn-sm"
+        onclick="openCatalogModal(${JSON.stringify(p).replace(/"/g,'&quot;')})">✏️</button>
+      <button class="btn btn-ghost btn-sm" style="color:var(--danger)"
+        onclick="deleteCatalogProductById(${p.id}, '${p.articl}')">🗑️</button>
+    </div>
+  </div>`;
+}
+
+function openCatalogModal(product) {
+  currentCatalogProductId = product ? product.id : null;
+  document.getElementById('catalogModalTitle').textContent = product ? `Редагувати: ${product.articl}` : 'Новий товар';
+  document.getElementById('cEditId').value = product ? product.id : '';
+  document.getElementById('cArticl').value = product ? product.articl : '';
+  document.getElementById('cName').value = product ? product.name : '';
+  document.getElementById('cLength').value = product ? (product.length / 10).toFixed(1) : 0;
+  document.getElementById('cWidth').value  = product ? (product.width  / 10).toFixed(1) : 0;
+  document.getElementById('cHeight').value = product ? (product.height / 10).toFixed(1) : 0;
+  document.getElementById('cWeight').value = product ? product.weight : 0;
+  document.getElementById('cStickerCount').value = product ? product.sticker_count : 0;
+  document.getElementById('cStickerNote').value = product ? product.sticker_note : '';
+  document.getElementById('cComment').value = product ? product.comment : '';
+
+  // Якщо у товару є комірка — показуємо її
+  const inCell = product && product.servo_board === '0x40' && product.servo_channel >= 0 && product.servo_channel <= 15;
+  document.getElementById('cChannel').value = inCell ? product.servo_channel : '';
+
+  document.getElementById('catalogDeleteBtn').classList.toggle('hidden', !product);
+  document.getElementById('catalogModal').classList.remove('hidden');
+}
+
+async function saveCatalogProduct() {
+  const id = document.getElementById('cEditId').value;
+  const articl = document.getElementById('cArticl').value.trim();
+  if (!articl) { alert('Введіть артикул'); return; }
+
+  const channelRaw = document.getElementById('cChannel').value.trim();
+  const channel = channelRaw !== '' ? parseInt(channelRaw) : null;
+
+  const baseData = {
+    name: document.getElementById('cName').value.trim(),
+    length: parseFloat(document.getElementById('cLength').value) * 10 || 0,
+    width:  parseFloat(document.getElementById('cWidth').value)  * 10 || 0,
+    height: parseFloat(document.getElementById('cHeight').value) * 10 || 0,
+    weight: parseFloat(document.getElementById('cWeight').value) || 0,
+    sticker_count: parseInt(document.getElementById('cStickerCount').value) || 0,
+    sticker_note:  document.getElementById('cStickerNote').value,
+    comment:       document.getElementById('cComment').value,
+  };
+
+  if (id) {
+    // Оновлення існуючого товару
+    const updateData = { ...baseData, articl };
+    if (channel !== null && channel >= 0 && channel <= 15) {
+      updateData.servo_board = 0x40;
+      updateData.servo_channel = channel;
+    } else if (channelRaw === '') {
+      // Знімаємо з комірки — переносимо до каталогу
+      updateData.servo_board = 0xFF;
+      updateData.servo_channel = -1;
+    }
+    const r = await fetch(`/api/products/${id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updateData)
+    });
+    if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка збереження'); return; }
+  } else {
+    // Новий товар
+    if (channel !== null && channel >= 0 && channel <= 15) {
+      // Зі своєю коміркою — використовуємо стандартний ендпоінт
+      const data = {
+        ...baseData, articl,
+        servo_board: 0x40,
+        servo_channel: channel,
+        cell_capacity: 10,
+        cell_stock: 0,
+      };
+      const r = await fetch('/api/products', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка'); return; }
+    } else {
+      // Тільки в каталог (без комірки)
+      const r = await fetch('/api/products/catalog', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...baseData, articl })
+      });
+      if (!r.ok) { const e = await r.json(); alert(e.error || 'Помилка'); return; }
+    }
+  }
+
+  closeCatalogModal();
+  await loadAllProducts();
+  await loadProducts();
+}
+
+async function deleteCatalogProduct() {
+  const id = document.getElementById('cEditId').value;
+  if (!id) return;
+  const articl = document.getElementById('cArticl').value;
+  if (!confirm(`Видалити товар «${articl}»?`)) return;
+  await fetch(`/api/products/${id}`, { method: 'DELETE' });
+  closeCatalogModal();
+  await loadAllProducts();
+  await loadProducts();
+}
+
+async function deleteCatalogProductById(id, articl) {
+  if (!confirm(`Видалити товар «${articl}»?`)) return;
+  await fetch(`/api/products/${id}`, { method: 'DELETE' });
+  await loadAllProducts();
+  await loadProducts();
+}
+
+function closeCatalogModal() {
+  document.getElementById('catalogModal').classList.add('hidden');
 }
 
 // ─── Коробки ──────────────────────────────────────────────────────────────────
@@ -531,7 +769,6 @@ function openBoxModal(box) {
   document.getElementById('boxModalTitle').textContent = box ? 'Редагувати коробку' : 'Нова коробка';
   document.getElementById('bEditId').value  = box ? box.id : '';
   document.getElementById('bName').value    = box ? box.name : '';
-  // мм → см
   document.getElementById('bLength').value  = box ? (box.length / 10).toFixed(1) : '';
   document.getElementById('bWidth').value   = box ? (box.width  / 10).toFixed(1) : '';
   document.getElementById('bHeight').value  = box ? (box.height / 10).toFixed(1) : '';
@@ -544,17 +781,14 @@ async function saveBox() {
   const id = document.getElementById('bEditId').value;
   const name = document.getElementById('bName').value.trim();
   if (!name) { alert('Введіть назву'); return; }
-
   const data = {
     name,
-    // см → мм для збереження
     length:       parseFloat(document.getElementById('bLength').value)  * 10 || 0,
     width:        parseFloat(document.getElementById('bWidth').value)   * 10 || 0,
     height:       parseFloat(document.getElementById('bHeight').value)  * 10 || 0,
     max_fill_pct: parseFloat(document.getElementById('bFillPct').value) || 80,
     weight:       parseFloat(document.getElementById('bWeight').value)  || 0,
   };
-
   if (id) {
     await fetch(`/api/boxes/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },

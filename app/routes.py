@@ -87,7 +87,10 @@ def load_orders_from_json():
     for od in orders_data:
         if Order.query.filter_by(order_id=od["order_id"]).first():
             continue
-        order = Order(order_id=od["order_id"])
+        order = Order(
+            order_id=od["order_id"],
+            order_date=od.get("order_date", ""),
+        )
         db.session.add(order)
         db.session.flush()
         for item in od["items"]:
@@ -134,6 +137,14 @@ def _pick_order(app, order_db_id: int):
             product = Product.query.filter_by(articl=item.articl, is_active=True).first()
 
             if not product:
+                item.status = "manual"
+                item.is_manual = True
+                db.session.commit()
+                continue
+
+            # Каталоговий товар без реальної комірки — ручний збір
+            has_cell = product.servo_board == 0x40 and 0 <= product.servo_channel <= 15
+            if not has_cell:
                 item.status = "manual"
                 item.is_manual = True
                 db.session.commit()
@@ -206,6 +217,61 @@ def cancel_order(order_id):
     return jsonify({"ok": True})
 
 
+@bp.route("/api/orders/<int:order_id>/restore", methods=["POST"])
+def restore_order(order_id):
+    """Відновити виконане замовлення до стану очікування."""
+    order = Order.query.get_or_404(order_id)
+    order.status = "pending"
+    order.started_at = None
+    order.packed_at = None
+    for item in order.items:
+        item.status = "pending"
+        item.quantity_picked = 0
+        item.is_manual = False
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
+@bp.route("/api/orders/<int:order_id>/add_item", methods=["POST"])
+def add_item_to_order(order_id):
+    """Додати позицію до замовлення (заміна/доповнення) з обов'язковим коментарем."""
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    articl = data.get("articl", "").strip()
+    try:
+        quantity = int(data.get("quantity", 1))
+    except (ValueError, TypeError):
+        quantity = 1
+    comment = data.get("comment", "").strip()
+    if not articl:
+        return jsonify({"error": "Артикул обов'язковий"}), 400
+    if not comment:
+        return jsonify({"error": "Коментар обов'язковий"}), 400
+    if quantity <= 0:
+        return jsonify({"error": "Кількість має бути більше 0"}), 400
+    item = OrderItem(
+        order_db_id=order.id,
+        articl=articl,
+        quantity_ordered=quantity,
+        is_manual=True,
+        status="manual",
+        extra_comment=comment,
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify({"ok": True, "item": item.to_dict()})
+
+
+@bp.route("/api/orders/<int:order_id>/comment", methods=["POST"])
+def update_order_comment(order_id):
+    """Зберегти коментар до замовлення."""
+    order = Order.query.get_or_404(order_id)
+    data = request.get_json() or {}
+    order.comment = data.get("comment", "")
+    db.session.commit()
+    return jsonify({"ok": True})
+
+
 @bp.route("/api/orders/<int:order_id>", methods=["DELETE"])
 def delete_order(order_id):
     """Видалити замовлення."""
@@ -271,12 +337,12 @@ def update_product(product_id):
     data = request.get_json()
     for field in ["name", "articl", "length", "width", "height", "weight",
                   "cell_capacity", "cell_stock", "sticker_count",
-                  "sticker_note", "comment", "servo_channel", "is_active"]:
+                  "sticker_note", "comment", "servo_channel", "servo_board", "is_active"]:
         if field in data:
             val = data[field]
             if field in ["length", "width", "height", "weight"]:
                 val = float(val)
-            elif field in ["cell_capacity", "cell_stock", "sticker_count", "servo_channel"]:
+            elif field in ["cell_capacity", "cell_stock", "sticker_count", "servo_channel", "servo_board"]:
                 val = int(val)
             setattr(p, field, val)
     p.updated_at = datetime.utcnow()
@@ -323,6 +389,59 @@ def delete_photo(product_id):
         p.photo = ""
         db.session.commit()
     return jsonify({"ok": True})
+
+
+@bp.route("/api/products/restock", methods=["POST"])
+def restock_product():
+    """Поповнити залишок комірки за артикулом (додати до поточного)."""
+    data = request.get_json() or {}
+    articl = data.get("articl", "").strip()
+    try:
+        quantity = int(data.get("quantity", 0))
+    except (ValueError, TypeError):
+        quantity = 0
+    if not articl or quantity <= 0:
+        return jsonify({"error": "Невірні дані"}), 400
+    p = Product.query.filter_by(articl=articl).first()
+    if not p:
+        return jsonify({"error": f"Товар з артикулом {articl} не знайдено"}), 404
+    p.cell_stock = p.cell_stock + quantity
+    db.session.commit()
+    return jsonify({"ok": True, "articl": articl, "cell_stock": p.cell_stock})
+
+
+@bp.route("/api/products/catalog", methods=["POST"])
+def create_catalog_product():
+    """Створити товар в каталозі без прив'язки до комірки (servo_board=0xFF)."""
+    data = request.get_json() or {}
+    articl = data.get("articl", "").strip()
+    if not articl:
+        return jsonify({"error": "Артикул обов'язковий"}), 400
+    if Product.query.filter_by(articl=articl).first():
+        return jsonify({"error": f"Артикул {articl} вже існує в системі"}), 400
+    p = Product(
+        articl=articl,
+        name=data.get("name", ""),
+        servo_board=0xFF,
+        servo_channel=-1,
+        length=float(data.get("length", 0)),
+        width=float(data.get("width", 0)),
+        height=float(data.get("height", 0)),
+        weight=float(data.get("weight", 0)),
+        sticker_count=int(data.get("sticker_count", 0)),
+        sticker_note=data.get("sticker_note", ""),
+        comment=data.get("comment", ""),
+    )
+    db.session.add(p)
+    db.session.commit()
+    return jsonify(p.to_dict()), 201
+
+
+@bp.route("/api/products/all")
+def get_all_products():
+    """Всі товари: і ті що в комірках, і ті що тільки в каталозі."""
+    products = Product.query.order_by(Product.name).all()
+    return jsonify([p.to_dict() for p in products])
 
 
 @bp.route("/api/products/init_16", methods=["POST"])
@@ -414,16 +533,34 @@ def init_boxes():
 
 # ─── API: Звіт ────────────────────────────────────────────────────────────────
 
-@bp.route("/api/report")
-def get_report():
+def _report_date_range():
+    """Повертає (since, until) для фільтрації звіту."""
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    if date_from and date_to:
+        try:
+            since = datetime.strptime(date_from, "%Y-%m-%d")
+            until = datetime.strptime(date_to, "%Y-%m-%d") + timedelta(days=1)
+            return since, until
+        except ValueError:
+            pass
     days = int(request.args.get("days", 7))
     since = datetime.utcnow() - timedelta(days=days)
+    return since, None
 
-    # Фільтруємо по даті початку комплектації (started_at)
-    orders = Order.query.filter(
+
+@bp.route("/api/report")
+def get_report():
+    since, until = _report_date_range()
+    days = int(request.args.get("days", 7))
+
+    q = Order.query.filter(
         Order.started_at >= since,
         Order.status.in_(["packed", "done"])
-    ).all()
+    )
+    if until:
+        q = q.filter(Order.started_at < until)
+    orders = q.all()
 
     total_orders = len(orders)
     total_items = sum(len(o.items) for o in orders)
@@ -450,6 +587,35 @@ def get_report():
     })
 
 
+@bp.route("/api/report/orders")
+def get_report_orders():
+    """Список замовлень для drill-down у KPI картках."""
+    since, until = _report_date_range()
+    q = Order.query.filter(
+        Order.started_at >= since,
+        Order.status.in_(["packed", "done"])
+    ).order_by(Order.started_at.desc())
+    if until:
+        q = q.filter(Order.started_at < until)
+    orders = q.all()
+    result = []
+    for o in orders:
+        total_picked = sum(i.quantity_picked for i in o.items)
+        manual_count = sum(1 for i in o.items if i.is_manual)
+        result.append({
+            "id": o.id,
+            "order_id": o.order_id,
+            "order_date": o.order_date or "",
+            "status": o.status,
+            "box": o.box.name if o.box else "",
+            "started_at": o.started_at.strftime("%d.%m.%Y %H:%M") if o.started_at else "",
+            "items_count": len(o.items),
+            "total_picked": total_picked,
+            "manual_count": manual_count,
+        })
+    return jsonify(result)
+
+
 @bp.route("/api/report/export")
 def export_report():
     """Вивантажити звіт у форматі Excel."""
@@ -460,12 +626,15 @@ def export_report():
         return jsonify({"error": "openpyxl не встановлений"}), 500
 
     days = int(request.args.get("days", 7))
-    since = datetime.utcnow() - timedelta(days=days)
+    since, until = _report_date_range()
 
-    orders = Order.query.filter(
+    q = Order.query.filter(
         Order.started_at >= since,
         Order.status.in_(["packed", "done"])
-    ).order_by(Order.started_at).all()
+    ).order_by(Order.started_at)
+    if until:
+        q = q.filter(Order.started_at < until)
+    orders = q.all()
 
     wb = Workbook()
     ws = wb.active
@@ -506,7 +675,12 @@ def export_report():
     buf = io.BytesIO()
     wb.save(buf)
     buf.seek(0)
-    filename = f"pick_to_belt_report_{days}d.xlsx"
+    date_from = request.args.get("date_from", "")
+    date_to = request.args.get("date_to", "")
+    if date_from and date_to:
+        filename = f"pick_to_belt_report_{date_from}_{date_to}.xlsx"
+    else:
+        filename = f"pick_to_belt_report_{days}d.xlsx"
     return send_file(
         buf,
         as_attachment=True,

@@ -85,6 +85,8 @@ class Order(db.Model):
     status = db.Column(db.String(20), default="pending")
     # pending → picking → packed → done
     box_id = db.Column(db.Integer, db.ForeignKey("boxes.id"), nullable=True)
+    order_date = db.Column(db.String(20), nullable=True)   # дата з JSON "24.02.2024"
+    comment = db.Column(db.Text, default="")               # коментар оператора
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     started_at = db.Column(db.DateTime, nullable=True)
     packed_at = db.Column(db.DateTime, nullable=True)
@@ -99,6 +101,8 @@ class Order(db.Model):
             "status": self.status,
             "box": self.box.to_dict() if self.box else None,
             "items": [i.to_dict() for i in self.items],
+            "order_date": self.order_date or "",
+            "comment": self.comment or "",
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "packed_at": self.packed_at.isoformat() if self.packed_at else None,
@@ -116,9 +120,16 @@ class OrderItem(db.Model):
     quantity_picked = db.Column(db.Integer, default=0)
     is_manual = db.Column(db.Boolean, default=False)
     status = db.Column(db.String(20), default="pending")
+    extra_comment = db.Column(db.Text, default="")  # коментар для замінних позицій
 
     def to_dict(self):
         product = Product.query.filter_by(articl=self.articl).first()
+        # has_servo: товар є в системі і прив'язаний до реальної комірки (board 0x40, channel 0-15)
+        has_servo = (
+            product is not None
+            and product.servo_board == 0x40
+            and 0 <= product.servo_channel <= 15
+        )
         return {
             "id": self.id,
             "articl": self.articl,
@@ -128,7 +139,8 @@ class OrderItem(db.Model):
             "quantity_picked": self.quantity_picked,
             "is_manual": self.is_manual,
             "status": self.status,
-            "has_servo": product is not None,
+            "extra_comment": self.extra_comment or "",
+            "has_servo": has_servo,
             "cell_stock": product.cell_stock if product else 0,
             "cell_capacity": product.cell_capacity if product else 0,
             "length": product.length if product else 0,

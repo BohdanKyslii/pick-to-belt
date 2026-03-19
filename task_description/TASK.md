@@ -15,7 +15,7 @@
 | Проект     | Pick-to-Belt                                           |
 | Тип        | Bug / Enhancement / New Feature / Refactor             |
 | Пріоритет  | Low / Medium / High / Critical                         |
-| Статус     | Todo / In Progress / Review / Done                     |
+| Статус     | Done                                                   |
 | Файл(и)    | routes.py / models.py / servo_controller.py / template |
 | Складність | S / M / L / XL                                         |
 

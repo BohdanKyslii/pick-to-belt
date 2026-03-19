@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Pick-to-Belt | Звіт</title>
 <style>
-:root { --primary:#2563eb; --success:#16a34a; --radius:12px; --shadow:0 2px 8px rgba(0,0,0,.12); }
+:root { --primary:#2563eb; --success:#16a34a; --danger:#dc2626;
+        --warning:#f59e0b; --gray:#6b7280; --radius:12px; --shadow:0 2px 8px rgba(0,0,0,.12); }
 * { box-sizing:border-box; margin:0; padding:0; }
 body { font-family:-apple-system,sans-serif; background:#f0f4f8; min-height:100vh; }
 .header { background:var(--primary);color:#fff;padding:12px 16px;
@@ -16,16 +17,25 @@ body { font-family:-apple-system,sans-serif; background:#f0f4f8; min-height:100v
 .container { padding:16px; }
 .period-bar { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
               padding:12px 16px;margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap; }
-.period-bar label { font-size:13px;color:#6b7280; }
-.period-bar select { padding:6px 10px;border-radius:8px;border:1.5px solid #d1d5db;font-size:14px; }
+.period-bar label { font-size:13px;color:var(--gray); }
+.period-bar select,.period-bar input[type=date] {
+  padding:6px 10px;border-radius:8px;border:1.5px solid #d1d5db;font-size:14px; }
+.period-sep { font-size:13px;color:var(--gray);padding:0 2px; }
 .btn { padding:8px 14px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600; }
 .btn-primary { background:var(--primary);color:#fff; }
+.btn-primary:hover { background:#1d4ed8; }
 .btn-success { background:var(--success);color:#fff; }
+.btn-success:hover { background:#15803d; }
+.btn-outline { background:#fff;color:var(--primary);border:1.5px solid var(--primary); }
+.btn-sm { padding:5px 10px;font-size:12px; }
 .kpi-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:16px; }
 .kpi-card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);
-            padding:16px;text-align:center; }
+            padding:16px;text-align:center;cursor:pointer;transition:.15s; }
+.kpi-card:hover { box-shadow:0 4px 16px rgba(37,99,235,.2);border:2px solid #bfdbfe; }
+.kpi-card { border:2px solid transparent; }
 .kpi-val   { font-size:32px;font-weight:800;color:var(--primary); }
-.kpi-label { font-size:13px;color:#6b7280;margin-top:4px; }
+.kpi-label { font-size:13px;color:var(--gray);margin-top:4px; }
+.kpi-hint  { font-size:10px;color:#93c5fd;margin-top:2px; }
 .card { background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:12px; }
 .card-title { font-size:15px;font-weight:700;margin-bottom:12px; }
 .top-row { display:flex;align-items:center;padding:8px 0;border-bottom:1px solid #f3f4f6; }
@@ -33,10 +43,30 @@ body { font-family:-apple-system,sans-serif; background:#f0f4f8; min-height:100v
 .top-rank { width:28px;height:28px;border-radius:50%;background:#e5e7eb;
             display:flex;align-items:center;justify-content:center;
             font-size:12px;font-weight:700;margin-right:10px;flex-shrink:0; }
-.top-art  { font-size:13px;color:#6b7280; }
+.top-art  { font-size:13px;color:var(--gray); }
 .top-name { font-size:14px;font-weight:600; }
 .top-count { margin-left:auto;font-size:16px;font-weight:700;color:var(--primary); }
-.note { font-size:12px;color:#6b7280;margin-top:4px; }
+.note { font-size:12px;color:var(--gray);margin-top:4px; }
+
+/* Modal */
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.5);
+                 z-index:200;display:flex;align-items:center;justify-content:center;
+                 padding:16px;overflow-y:auto; }
+.modal-overlay.hidden { display:none !important; }
+.modal { background:#fff;border-radius:var(--radius);padding:20px;
+         width:100%;max-width:640px;max-height:90vh;overflow-y:auto; }
+.modal h3 { font-size:17px;font-weight:700;margin-bottom:12px; }
+.modal-actions { display:flex;gap:8px;margin-top:14px;flex-wrap:wrap; }
+
+/* Orders table */
+.orders-table { width:100%;border-collapse:collapse;font-size:13px; }
+.orders-table th { text-align:left;padding:7px 8px;font-size:11px;color:var(--gray);
+                   border-bottom:2px solid #e5e7eb;font-weight:600; }
+.orders-table td { padding:8px;border-bottom:1px solid #f3f4f6;vertical-align:middle; }
+.orders-table tr:last-child td { border-bottom:none; }
+.badge { padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600; }
+.badge-done { background:#f3f4f6;color:#374151; }
+.badge-packed { background:#d1fae5;color:#065f46; }
 </style>
 </head>
 <body>
@@ -50,45 +80,113 @@ body { font-family:-apple-system,sans-serif; background:#f0f4f8; min-height:100v
 <div class="container">
   <div class="period-bar">
     <label>Період:</label>
-    <select id="periodSel" onchange="loadReport()">
+    <select id="periodSel" onchange="onPeriodChange()">
       <option value="1">Сьогодні</option>
       <option value="7" selected>7 днів</option>
       <option value="30">30 днів</option>
       <option value="90">90 днів</option>
     </select>
+
+    <span class="period-sep">або</span>
+
+    <label>з</label>
+    <input type="date" id="dateFrom" onchange="onDateRangeChange()">
+    <label>по</label>
+    <input type="date" id="dateTo" onchange="onDateRangeChange()">
+
     <button class="btn btn-primary" onclick="loadReport()">🔄 Оновити</button>
     <button class="btn btn-success" onclick="exportExcel()">📥 Excel</button>
   </div>
   <div class="note" style="margin-bottom:12px;padding:0 4px">
-    📅 Статистика за датою початку комплектації замовлень
+    📅 Статистика за датою початку комплектації замовлень. Натисніть на картку КПІ — побачите список замовлень.
   </div>
   <div class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-val" id="kpiOrders">—</div><div class="kpi-label">Замовлень</div></div>
-    <div class="kpi-card"><div class="kpi-val" id="kpiItems">—</div><div class="kpi-label">Позицій</div></div>
-    <div class="kpi-card"><div class="kpi-val" id="kpiPicked">—</div><div class="kpi-label">Відібрано шт</div></div>
-    <div class="kpi-card"><div class="kpi-val" id="kpiManual">—</div><div class="kpi-label">Вручну</div></div>
+    <div class="kpi-card" onclick="openOrdersList('orders')">
+      <div class="kpi-val" id="kpiOrders">—</div>
+      <div class="kpi-label">Замовлень</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
+    <div class="kpi-card" onclick="openOrdersList('items')">
+      <div class="kpi-val" id="kpiItems">—</div>
+      <div class="kpi-label">Позицій</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
+    <div class="kpi-card" onclick="openOrdersList('picked')">
+      <div class="kpi-val" id="kpiPicked">—</div>
+      <div class="kpi-label">Відібрано шт</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
+    <div class="kpi-card" onclick="openOrdersList('manual')">
+      <div class="kpi-val" id="kpiManual">—</div>
+      <div class="kpi-label">Вручну</div>
+      <div class="kpi-hint">натисніть для перегляду</div>
+    </div>
   </div>
   <div class="card">
     <div class="card-title">🏆 Топ товарів</div>
     <div id="topProducts"></div>
   </div>
 </div>
+
+<!-- Modal: список замовлень (drill-down) -->
+<div id="ordersModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="ordersModalTitle">Замовлення за період</h3>
+    <div id="ordersModalContent" style="overflow-x:auto"></div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="exportExcel()">📥 Excel</button>
+      <button class="btn btn-outline" onclick="closeModal()">Закрити</button>
+    </div>
+  </div>
+</div>
+
 <script>
-async function loadReport() {
+let reportData = null;
+let ordersListData = [];
+// Режим: 'period' або 'daterange'
+let filterMode = 'period';
+
+function onPeriodChange() {
+  filterMode = 'period';
+  document.getElementById('dateFrom').value = '';
+  document.getElementById('dateTo').value = '';
+  loadReport();
+}
+
+function onDateRangeChange() {
+  const from = document.getElementById('dateFrom').value;
+  const to = document.getElementById('dateTo').value;
+  if (from && to) {
+    filterMode = 'daterange';
+    loadReport();
+  }
+}
+
+function buildQueryParams() {
+  if (filterMode === 'daterange') {
+    const from = document.getElementById('dateFrom').value;
+    const to = document.getElementById('dateTo').value;
+    if (from && to) return `date_from=${from}&date_to=${to}`;
+  }
   const days = document.getElementById('periodSel').value;
-  const r = await fetch(`/api/report?days=${days}`);
-  const data = await r.json();
-  document.getElementById('kpiOrders').textContent = data.total_orders;
-  document.getElementById('kpiItems').textContent  = data.total_items;
-  document.getElementById('kpiPicked').textContent = data.total_picked;
-  document.getElementById('kpiManual').textContent = data.manual_items;
+  return `days=${days}`;
+}
+
+async function loadReport() {
+  const params = buildQueryParams();
+  const r = await fetch(`/api/report?${params}`);
+  reportData = await r.json();
+  document.getElementById('kpiOrders').textContent = reportData.total_orders;
+  document.getElementById('kpiItems').textContent  = reportData.total_items;
+  document.getElementById('kpiPicked').textContent = reportData.total_picked;
+  document.getElementById('kpiManual').textContent = reportData.manual_items;
 
   const top = document.getElementById('topProducts');
-  if (!data.top_products.length) {
+  if (!reportData.top_products.length) {
     top.innerHTML = '<div style="color:#6b7280;text-align:center;padding:20px">Немає даних за цей період</div>';
     return;
   }
-  top.innerHTML = data.top_products.map((p, i) => `
+  top.innerHTML = reportData.top_products.map((p, i) => `
     <div class="top-row">
       <div class="top-rank">${i + 1}</div>
       <div>
@@ -99,9 +197,68 @@ async function loadReport() {
     </div>`).join('');
 }
 
+const kpiTitles = {
+  orders: 'Список замовлень',
+  items:  'Замовлення (позиції)',
+  picked: 'Замовлення (відібрано)',
+  manual: 'Замовлення (ручні позиції)',
+};
+
+async function openOrdersList(kpiType) {
+  const params = buildQueryParams();
+  const r = await fetch(`/api/report/orders?${params}`);
+  ordersListData = await r.json();
+
+  document.getElementById('ordersModalTitle').textContent = kpiTitles[kpiType] || 'Замовлення';
+
+  if (!ordersListData.length) {
+    document.getElementById('ordersModalContent').innerHTML =
+      '<p style="color:#6b7280;text-align:center;padding:20px">Немає замовлень за цей період</p>';
+    document.getElementById('ordersModal').classList.remove('hidden');
+    return;
+  }
+
+  const rows = ordersListData.map(o => {
+    const badge = o.status === 'done'
+      ? '<span class="badge badge-done">Виконано</span>'
+      : '<span class="badge badge-packed">Запаковано</span>';
+    return `<tr>
+      <td>${o.order_id}${o.order_date ? ` <span style="font-size:11px;color:#6b7280">від ${o.order_date}</span>` : ''}</td>
+      <td>${badge}</td>
+      <td>${o.started_at}</td>
+      <td>${o.box || '—'}</td>
+      <td style="text-align:center">${o.items_count}</td>
+      <td style="text-align:center">${o.total_picked}</td>
+      <td style="text-align:center">${o.manual_count > 0 ? `<span style="color:#dc2626">${o.manual_count}</span>` : '0'}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('ordersModalContent').innerHTML = `
+    <table class="orders-table">
+      <thead>
+        <tr>
+          <th>Замовлення</th>
+          <th>Статус</th>
+          <th>Дата</th>
+          <th>Коробка</th>
+          <th style="text-align:center">Позицій</th>
+          <th style="text-align:center">Відібрано</th>
+          <th style="text-align:center">Вручну</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  document.getElementById('ordersModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('ordersModal').classList.add('hidden');
+}
+
 function exportExcel() {
-  const days = document.getElementById('periodSel').value;
-  window.location.href = `/api/report/export?days=${days}`;
+  const params = buildQueryParams();
+  window.location.href = `/api/report/export?${params}`;
 }
 
 loadReport();

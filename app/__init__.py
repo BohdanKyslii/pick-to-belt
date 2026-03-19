@@ -38,6 +38,9 @@ def _run_migrations():
     migrations = [
         "ALTER TABLE boxes ADD COLUMN max_fill_pct FLOAT DEFAULT 80.0",
         "ALTER TABLE boxes ADD COLUMN weight FLOAT DEFAULT 0.0",
+        "ALTER TABLE orders ADD COLUMN order_date TEXT",
+        "ALTER TABLE orders ADD COLUMN comment TEXT DEFAULT ''",
+        "ALTER TABLE order_items ADD COLUMN extra_comment TEXT DEFAULT ''",
     ]
     for sql in migrations:
         try:
