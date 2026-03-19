@@ -244,6 +244,24 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
                 font-size: 11px; color: #9d174d; margin-top: 3px; display: inline-block; }
 
 .confirm-btn-row { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+
+/* Tab navigation */
+.actions-top { padding: 10px 16px; display: flex; gap: 8px; flex-wrap: wrap;
+               background: #fff; border-bottom: 1px solid #e5e7eb; }
+.tab-bar { background: #fff; border-bottom: 2px solid #e5e7eb;
+           display: flex; overflow-x: auto; flex-wrap: nowrap; }
+.tab-btn { padding: 11px 14px; font-size: 13px; font-weight: 600;
+           color: var(--gray); border: none; background: transparent;
+           cursor: pointer; white-space: nowrap;
+           border-bottom: 3px solid transparent; margin-bottom: -2px;
+           transition: .15s; flex-shrink: 0; }
+.tab-btn:hover { color: var(--primary); background: #f0f4f8; }
+.tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: #eff6ff; }
+/* Sortable table headers */
+.cells-table th.sortable { cursor: pointer; user-select: none; }
+.cells-table th.sortable:hover { color: var(--primary); }
+.sort-arrow { margin-left: 3px; font-size: 10px; opacity: .4; }
+.sort-arrow.active { opacity: 1; color: var(--primary); }
 </style>
 </head>
 <body>
@@ -259,50 +277,67 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   </div>
 </div>
 
-<div class="actions-bar">
-  <button class="btn btn-primary" onclick="loadOrders()">🔄 Оновити</button>
-  <button class="btn btn-outline" onclick="loadFromJson()">📂 Завантажити JSON</button>
-  <button class="btn btn-ghost" id="cellsOverviewBtn" onclick="toggleCellsOverview()">📦 Залишки по Коміркам</button>
-  <button class="btn btn-ghost" onclick="toggleCompleted()">📋 Виконані</button>
+<div class="actions-top">
+  <button class="btn btn-primary btn-sm" onclick="loadOrders()">🔄 Оновити</button>
+  <button class="btn btn-outline btn-sm" onclick="loadFromJson()">📂 Завантажити JSON</button>
+</div>
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-btn-orders" onclick="switchTab('orders')">📋 Замовлення</button>
+  <button class="tab-btn" id="tab-btn-cells" onclick="switchTab('cells')">📦 Залишки по Коміркам</button>
+  <button class="tab-btn" id="tab-btn-pending" onclick="switchTab('pending')">🚀 Замовлення до Комплектації</button>
+  <button class="tab-btn" id="tab-btn-completed" onclick="switchTab('completed')">✅ Виконані замовлення</button>
 </div>
 
-<div id="app" class="orders-list">
-  <div class="loading">Завантаження замовлень...</div>
-</div>
-
-<div id="cellsOverviewSection" class="cells-overview hidden">
-  <div class="cells-overview-header">
-    <h2>📦 Залишки по Коміркам</h2>
-    <button class="btn btn-outline btn-sm" onclick="loadCellsOverview()">🔄 Оновити</button>
-  </div>
-  <div id="cellsSummary" class="cells-summary"></div>
-  <div class="cells-table-wrap">
-    <table class="cells-table">
-      <thead>
-        <tr>
-          <th class="ch-col">#</th>
-          <th style="width:40px"></th>
-          <th>Артикул / Назва</th>
-          <th class="num-col">В комірці</th>
-          <th class="num-col">Потрібно</th>
-          <th class="num-col">Різниця</th>
-          <th style="min-width:140px">Поповнити</th>
-        </tr>
-      </thead>
-      <tbody id="cellsTableBody">
-        <tr><td colspan="7" style="text-align:center;padding:20px;color:#6b7280">Завантаження...</td></tr>
-      </tbody>
-    </table>
-  </div>
-  <div id="missingSection" class="missing-section hidden">
-    <div class="missing-title">⚠️ Товари потрібні в замовленнях, але відсутні в комірках</div>
-    <div id="missingList"></div>
+<div id="tab-section-orders">
+  <div id="app" class="orders-list">
+    <div class="loading">Завантаження замовлень...</div>
   </div>
 </div>
 
-<div id="completedSection" class="orders-list hidden">
-  <div class="section-label"><span>Виконані замовлення</span><hr></div>
-  <div id="completedList"><div class="loading">Завантаження...</div></div>
+<div id="tab-section-cells" class="hidden">
+  <div class="cells-overview">
+    <div class="cells-overview-header">
+      <h2>📦 Залишки по Коміркам</h2>
+      <button class="btn btn-outline btn-sm" onclick="loadCellsOverview()">🔄 Оновити</button>
+    </div>
+    <div id="cellsSummary" class="cells-summary"></div>
+    <div class="cells-table-wrap">
+      <table class="cells-table">
+        <thead>
+          <tr>
+            <th class="ch-col">#</th>
+            <th style="width:40px"></th>
+            <th class="sortable" onclick="cycleCellsSort('name')">Артикул / Назва <span id="sort-name" class="sort-arrow active">▲</span></th>
+            <th class="num-col sortable" onclick="cycleCellsSort('stock')">В комірці <span id="sort-stock" class="sort-arrow"></span></th>
+            <th class="num-col sortable" onclick="cycleCellsSort('needed')">Потрібно <span id="sort-needed" class="sort-arrow"></span></th>
+            <th class="num-col sortable" onclick="cycleCellsSort('diff')">Різниця <span id="sort-diff" class="sort-arrow"></span></th>
+            <th style="min-width:140px">Поповнити</th>
+          </tr>
+        </thead>
+        <tbody id="cellsTableBody">
+          <tr><td colspan="7" style="text-align:center;padding:20px;color:#6b7280">Завантаження...</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div id="missingSection" class="missing-section hidden">
+      <div class="missing-title">⚠️ Товари потрібні в замовленнях, але відсутні в комірках</div>
+      <div id="missingList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="tab-section-pending" class="hidden">
+  <div class="orders-list">
+    <div class="section-label"><span>🚀 Замовлення до Комплектації</span><hr></div>
+    <div id="pendingList"><div class="loading">Завантаження...</div></div>
+  </div>
+</div>
+
+<div id="tab-section-completed" class="hidden">
+  <div class="orders-list">
+    <div class="section-label"><span>✅ Виконані замовлення</span><hr></div>
+    <div id="completedList"><div class="loading">Завантаження...</div></div>
+  </div>
 </div>
 
 <!-- Modal: підтвердження ручного товару -->
@@ -421,7 +456,8 @@ let currentOrderDbId = null;
 let currentDeleteOrderId = null;
 let currentRestoreOrderId = null;
 let restockItems = [];
-let completedVisible = false;
+let currentTab = 'orders';
+let cellsSort = { col: 'name', dir: 'asc' };
 // Зберігаємо стан відкритих замовлень між ре-рендерами
 const openOrders = new Set();
 
@@ -429,6 +465,13 @@ async function init() {
   await loadBoxes();
   await loadOrders();
   await checkSimulation();
+  // Ensure only orders tab is visible initially
+  ['cells','pending','completed'].forEach(t => {
+    document.getElementById(`tab-section-${t}`).classList.add('hidden');
+    document.getElementById(`tab-btn-${t}`).classList.remove('active');
+  });
+  document.getElementById('tab-section-orders').classList.remove('hidden');
+  document.getElementById('tab-btn-orders').classList.add('active');
   setInterval(loadOrders, 10000);
 }
 
@@ -449,6 +492,7 @@ async function loadOrders() {
   const r = await fetch('/api/orders');
   orders = await r.json();
   renderOrders();
+  if (currentTab === 'pending') await loadAllPendingOrders();
 }
 
 async function loadFromJson() {
@@ -459,11 +503,16 @@ async function loadFromJson() {
   await loadOrders();
 }
 
-async function toggleCompleted() {
-  completedVisible = !completedVisible;
-  const sec = document.getElementById('completedSection');
-  sec.classList.toggle('hidden', !completedVisible);
-  if (completedVisible) await loadCompletedOrders();
+async function switchTab(tab) {
+  const tabs = ['orders', 'cells', 'pending', 'completed'];
+  tabs.forEach(t => {
+    document.getElementById(`tab-section-${t}`).classList.toggle('hidden', t !== tab);
+    document.getElementById(`tab-btn-${t}`).classList.toggle('active', t === tab);
+  });
+  currentTab = tab;
+  if (tab === 'cells') await loadCellsOverview();
+  else if (tab === 'pending') await loadAllPendingOrders();
+  else if (tab === 'completed') await loadCompletedOrders();
 }
 
 async function loadCompletedOrders() {
@@ -1008,17 +1057,6 @@ async function confirmRestore() {
 
 // ─── Залишки по Коміркам ──────────────────────────────────────────────────────
 
-let cellsOverviewVisible = false;
-
-async function toggleCellsOverview() {
-  cellsOverviewVisible = !cellsOverviewVisible;
-  const sec = document.getElementById('cellsOverviewSection');
-  const btn = document.getElementById('cellsOverviewBtn');
-  sec.classList.toggle('hidden', !cellsOverviewVisible);
-  btn.classList.toggle('btn-primary', cellsOverviewVisible);
-  btn.classList.toggle('btn-ghost', !cellsOverviewVisible);
-  if (cellsOverviewVisible) await loadCellsOverview();
-}
 
 async function loadCellsOverview() {
   const r = await fetch('/api/cells/overview');
@@ -1053,13 +1091,15 @@ function renderCellsSummary(cells) {
 }
 
 function renderCellsTable(cells) {
+  window._lastCellsData = cells;
   const tbody = document.getElementById('cellsTableBody');
   if (!cells.length) {
     tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#6b7280">Комірок не знайдено. Ініціалізуйте товари в Налаштуваннях.</td></tr>';
     return;
   }
 
-  tbody.innerHTML = cells.map(c => {
+  const sorted = sortCells(cells);
+  tbody.innerHTML = sorted.map(c => {
     const diff = c.cell_stock - c.needed;
     let rowClass = 'cells-row-empty';
     let diffClass = 'diff-neutral';
@@ -1146,6 +1186,94 @@ async function addCellStock(productId, channel) {
   await loadCellsOverview();
   // Також оновлюємо активні замовлення щоб кнопки відобразились актуально
   await loadOrders();
+}
+
+// ─── Сортування таблиці Залишки по Коміркам ──────────────────────────────────
+
+function cycleCellsSort(col) {
+  if (cellsSort.col === col) {
+    cellsSort.dir = cellsSort.dir === 'asc' ? 'desc' : 'asc';
+  } else {
+    cellsSort.col = col;
+    cellsSort.dir = 'asc';
+  }
+  // Update header arrows
+  ['name','stock','needed','diff'].forEach(c => {
+    const el = document.getElementById(`sort-${c}`);
+    if (!el) return;
+    if (c === cellsSort.col) {
+      el.textContent = cellsSort.dir === 'asc' ? '▲' : '▼';
+      el.classList.add('active');
+    } else {
+      el.textContent = '';
+      el.classList.remove('active');
+    }
+  });
+  // Re-render with current data (stored in last loaded cells)
+  if (window._lastCellsData) renderCellsTable(window._lastCellsData);
+}
+
+function sortCells(cells) {
+  const { col, dir } = cellsSort;
+  const mul = dir === 'asc' ? 1 : -1;
+  return [...cells].sort((a, b) => {
+    let va, vb;
+    if (col === 'name') {
+      va = (a.name || a.articl || '').toLowerCase();
+      vb = (b.name || b.articl || '').toLowerCase();
+      return mul * va.localeCompare(vb, 'uk');
+    } else if (col === 'stock') {
+      va = a.cell_stock; vb = b.cell_stock;
+    } else if (col === 'needed') {
+      va = a.needed; vb = b.needed;
+    } else if (col === 'diff') {
+      va = a.cell_stock - a.needed; vb = b.cell_stock - b.needed;
+    }
+    return mul * (va - vb);
+  });
+}
+
+// ─── Замовлення до Комплектації ───────────────────────────────────────────────
+
+async function loadAllPendingOrders() {
+  const r = await fetch('/api/orders/all_pending');
+  const data = await r.json();
+  const list = document.getElementById('pendingList');
+  if (!data.length) {
+    list.innerHTML = '<div class="loading">✅ Немає замовлень до комплектації</div>';
+    return;
+  }
+  list.innerHTML = data.map(o => renderPendingOrderCard(o)).join('');
+}
+
+function renderPendingOrderCard(o) {
+  const units = totalUnits(o.items);
+  const stockIssues = getStockIssues(o);
+  const rec = recommendBox(o.items);
+
+  const statusHtml = stockIssues.length
+    ? `<span class="status-badge" style="background:#fee2e2;color:#991b1b">🔴 Нестача ${stockIssues.length} поз.</span>`
+    : `<span class="status-badge badge-pending">✅ Готово до збору</span>`;
+
+  const recBoxHtml = rec
+    ? `<span style="font-size:11px;color:#6b7280;margin-left:8px">📦 ${rec.box.name}</span>`
+    : '';
+
+  return `<div class="order-card pending">
+    <div class="order-header" onclick="toggleOrder('p${o.id}')">
+      <div class="order-header-left">
+        <div class="order-title">🔖 ${o.order_id}${o.order_date ? `<span class="order-date">від ${o.order_date}</span>` : ''}${recBoxHtml}</div>
+        <div class="order-meta">${o.items.length} позицій • ${units} одиниць</div>
+      </div>
+      <div class="order-header-right" onclick="event.stopPropagation()">
+        ${statusHtml}
+      </div>
+    </div>
+    <div class="order-body" id="body_p${o.id}" style="display:none">
+      ${stockIssues.length ? `<div class="alert alert-danger">🔴 Нестача: ${stockIssues.map(i=>i.name||i.articl).join(', ')}</div>` : ''}
+      ${renderItemsTable(o)}
+    </div>
+  </div>`;
 }
 
 // ─── Утиліти ──────────────────────────────────────────────────────────────────

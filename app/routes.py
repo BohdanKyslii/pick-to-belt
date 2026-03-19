@@ -62,6 +62,13 @@ def get_orders():
     return jsonify([o.to_dict() for o in orders])
 
 
+@bp.route("/api/orders/all_pending")
+def get_all_pending_orders():
+    """Всі pending замовлення для вкладки «Замовлення до Комплектації»."""
+    orders = Order.query.filter_by(status="pending").order_by(Order.created_at).all()
+    return jsonify([o.to_dict() for o in orders])
+
+
 @bp.route("/api/orders/completed")
 def get_completed_orders():
     """Виконані замовлення (packed/done), останні 50."""
