@@ -141,6 +141,11 @@ def _pick_order(app, order_db_id: int):
             return
 
         for item in order.items:
+            # Refresh from DB — a concurrent release_servo_item may have already handled this item
+            db.session.refresh(item)
+            if item.status != "pending":
+                continue
+
             product = Product.query.filter_by(articl=item.articl, is_active=True).first()
 
             if not product:
@@ -157,7 +162,12 @@ def _pick_order(app, order_db_id: int):
                 db.session.commit()
                 continue
 
-            need = item.quantity_ordered
+            need = item.quantity_ordered - item.quantity_picked
+            if need <= 0:
+                item.status = "done"
+                db.session.commit()
+                continue
+
             available = product.cell_stock
 
             if available == 0:
@@ -178,7 +188,7 @@ def _pick_order(app, order_db_id: int):
                 quantity=pick_count,
             )
             db.session.add(log)
-            item.quantity_picked = pick_count
+            item.quantity_picked += pick_count
             item.status = "partial" if manual_count > 0 else "done"
             db.session.commit()
 
