@@ -202,14 +202,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       <label>Назва товару</label>
       <input id="fName" placeholder="наприклад: Кабель USB-C 1м">
     </div>
-    <div class="form-group">
-      <label>Фото товару</label>
-      <div class="photo-area">
-        <div id="photoPreview" class="photo-placeholder">📦</div>
-        <button id="photoDelBtn" class="photo-del-btn hidden" onclick="deletePhoto()" title="Видалити фото">✕</button>
-      </div>
-      <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this)">
-    </div>
     <hr class="modal-divider">
     <div class="form-row">
       <div class="form-group">
@@ -219,27 +211,6 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
       <div class="form-group">
         <label>Залишок зараз (шт)</label>
         <input id="fStock" type="number" value="0" min="0">
-      </div>
-    </div>
-    <div class="section-title" style="font-size:13px;margin-bottom:6px">Розміри товару (см)</div>
-    <div class="form-row-3">
-      <div class="form-group"><label>Довжина</label><input id="fLength" type="number" step="0.1" value="0"></div>
-      <div class="form-group"><label>Ширина</label><input id="fWidth"  type="number" step="0.1" value="0"></div>
-      <div class="form-group"><label>Висота</label><input id="fHeight" type="number" step="0.1" value="0"></div>
-    </div>
-    <div class="form-group">
-      <label>Вага (г)</label>
-      <input id="fWeight" type="number" step="1" value="0">
-    </div>
-    <hr class="modal-divider">
-    <div class="form-row">
-      <div class="form-group">
-        <label>К-сть стікерів (0 = не потрібно)</label>
-        <input id="fStickerCount" type="number" value="0" min="0">
-      </div>
-      <div class="form-group">
-        <label>Опис стікера</label>
-        <input id="fStickerNote" placeholder="наприклад: EAC">
       </div>
     </div>
     <div class="form-group">
@@ -408,26 +379,8 @@ function openProductModal(product, channel) {
   document.getElementById('fName').value = product ? product.name : '';
   document.getElementById('fCapacity').value = product ? product.cell_capacity : 20;
   document.getElementById('fStock').value = product ? product.cell_stock : 0;
-  document.getElementById('fLength').value = product ? (product.length / 10).toFixed(1) : 0;
-  document.getElementById('fWidth').value  = product ? (product.width  / 10).toFixed(1) : 0;
-  document.getElementById('fHeight').value = product ? (product.height / 10).toFixed(1) : 0;
-  document.getElementById('fWeight').value = product ? product.weight : 0;
-  document.getElementById('fStickerCount').value = product ? product.sticker_count : 0;
-  document.getElementById('fStickerNote').value = product ? product.sticker_note : '';
   document.getElementById('fComment').value = product ? product.comment : '';
   document.getElementById('artStatus').textContent = '';
-  document.getElementById('fPhoto').value = '';
-
-  const prevDiv = document.getElementById('photoPreview');
-  const delBtn  = document.getElementById('photoDelBtn');
-  if (product && product.photo) {
-    prevDiv.innerHTML = `<img src="${product.photo}" class="photo-preview" onerror="this.style.display='none'">`;
-    delBtn.classList.remove('hidden');
-  } else {
-    prevDiv.innerHTML = '<span style="font-size:30px">📦</span>';
-    prevDiv.className = 'photo-placeholder';
-    delBtn.classList.add('hidden');
-  }
 
   document.getElementById('clearCellBtn').classList.toggle('hidden', !product);
   document.getElementById('productModal').classList.remove('hidden');
@@ -450,12 +403,6 @@ async function lookupArticl() {
       document.getElementById('fName').value = p.name || '';
       document.getElementById('fCapacity').value = p.cell_capacity;
       document.getElementById('fStock').value = p.cell_stock;
-      document.getElementById('fLength').value = (p.length / 10).toFixed(1);
-      document.getElementById('fWidth').value  = (p.width  / 10).toFixed(1);
-      document.getElementById('fHeight').value = (p.height / 10).toFixed(1);
-      document.getElementById('fWeight').value = p.weight;
-      document.getElementById('fStickerCount').value = p.sticker_count;
-      document.getElementById('fStickerNote').value = p.sticker_note;
       document.getElementById('fComment').value = p.comment;
     }
     status.innerHTML = `<span class="articl-found">✅ Знайдено в базі</span>`;
@@ -464,33 +411,6 @@ async function lookupArticl() {
   }
 }
 
-function previewPhoto(input) {
-  if (!input.files || !input.files[0]) return;
-  const reader = new FileReader();
-  reader.onload = e => {
-    const prevDiv = document.getElementById('photoPreview');
-    prevDiv.innerHTML = `<img src="${e.target.result}" class="photo-preview">`;
-    prevDiv.className = 'photo-area';
-    document.getElementById('photoDelBtn').classList.remove('hidden');
-  };
-  reader.readAsDataURL(input.files[0]);
-}
-
-async function deletePhoto() {
-  if (!currentProductId) {
-    document.getElementById('fPhoto').value = '';
-    document.getElementById('photoPreview').innerHTML = '<span style="font-size:30px">📦</span>';
-    document.getElementById('photoPreview').className = 'photo-placeholder';
-    document.getElementById('photoDelBtn').classList.add('hidden');
-    return;
-  }
-  if (!confirm('Видалити фото товару?')) return;
-  await fetch(`/api/products/${currentProductId}/photo`, { method: 'DELETE' });
-  document.getElementById('photoPreview').innerHTML = '<span style="font-size:30px">📦</span>';
-  document.getElementById('photoPreview').className = 'photo-placeholder';
-  document.getElementById('photoDelBtn').classList.add('hidden');
-  await loadProducts();
-}
 
 async function saveProduct() {
   const id = document.getElementById('editId').value;
@@ -505,16 +425,9 @@ async function saveProduct() {
     servo_channel: channel,
     cell_capacity: parseInt(document.getElementById('fCapacity').value) || 10,
     cell_stock:    parseInt(document.getElementById('fStock').value)    || 0,
-    length: parseFloat(document.getElementById('fLength').value) * 10 || 0,
-    width:  parseFloat(document.getElementById('fWidth').value)  * 10 || 0,
-    height: parseFloat(document.getElementById('fHeight').value) * 10 || 0,
-    weight: parseFloat(document.getElementById('fWeight').value) || 0,
-    sticker_count: parseInt(document.getElementById('fStickerCount').value) || 0,
-    sticker_note:  document.getElementById('fStickerNote').value,
     comment:       document.getElementById('fComment').value,
   };
 
-  let savedId = id;
   if (id) {
     const r = await fetch(`/api/products/${id}`, {
       method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -527,14 +440,6 @@ async function saveProduct() {
       body: JSON.stringify(data)
     });
     if (!r.ok) { const e = await r.json(); alert(e.error); return; }
-    savedId = (await r.json()).id;
-  }
-
-  const photoFile = document.getElementById('fPhoto').files[0];
-  if (photoFile && savedId) {
-    const fd = new FormData();
-    fd.append('photo', photoFile);
-    await fetch(`/api/products/${savedId}/photo`, { method: 'POST', body: fd });
   }
 
   closeModal();

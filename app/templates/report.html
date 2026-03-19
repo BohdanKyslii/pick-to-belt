@@ -199,55 +199,107 @@ async function loadReport() {
 
 const kpiTitles = {
   orders: 'Список замовлень',
-  items:  'Замовлення (позиції)',
-  picked: 'Замовлення (відібрано)',
-  manual: 'Замовлення (ручні позиції)',
+  items:  'Позиції — Відібрано та Вручну',
+  picked: 'Відібрано по товарах',
+  manual: 'Вручну по товарах',
 };
 
 async function openOrdersList(kpiType) {
   const params = buildQueryParams();
-  const r = await fetch(`/api/report/orders?${params}`);
-  ordersListData = await r.json();
-
   document.getElementById('ordersModalTitle').textContent = kpiTitles[kpiType] || 'Замовлення';
 
-  if (!ordersListData.length) {
-    document.getElementById('ordersModalContent').innerHTML =
-      '<p style="color:#6b7280;text-align:center;padding:20px">Немає замовлень за цей період</p>';
-    document.getElementById('ordersModal').classList.remove('hidden');
-    return;
-  }
-
-  const rows = ordersListData.map(o => {
-    const badge = o.status === 'done'
-      ? '<span class="badge badge-done">Виконано</span>'
-      : '<span class="badge badge-packed">Запаковано</span>';
-    return `<tr>
-      <td>${o.order_id}${o.order_date ? ` <span style="font-size:11px;color:#6b7280">від ${o.order_date}</span>` : ''}</td>
-      <td>${badge}</td>
-      <td>${o.started_at}</td>
-      <td>${o.box || '—'}</td>
-      <td style="text-align:center">${o.items_count}</td>
-      <td style="text-align:center">${o.total_picked}</td>
-      <td style="text-align:center">${o.manual_count > 0 ? `<span style="color:#dc2626">${o.manual_count}</span>` : '0'}</td>
-    </tr>`;
-  }).join('');
-
-  document.getElementById('ordersModalContent').innerHTML = `
-    <table class="orders-table">
-      <thead>
-        <tr>
-          <th>Замовлення</th>
-          <th>Статус</th>
-          <th>Дата</th>
-          <th>Коробка</th>
+  if (kpiType === 'orders') {
+    const r = await fetch(`/api/report/orders?${params}`);
+    ordersListData = await r.json();
+    if (!ordersListData.length) {
+      document.getElementById('ordersModalContent').innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:20px">Немає замовлень за цей період</p>';
+      document.getElementById('ordersModal').classList.remove('hidden');
+      return;
+    }
+    const rows = ordersListData.map(o => {
+      const badge = o.status === 'done'
+        ? '<span class="badge badge-done">Виконано</span>'
+        : '<span class="badge badge-packed">Запаковано</span>';
+      return `<tr>
+        <td>${o.order_id}${o.order_date ? ` <span style="font-size:11px;color:#6b7280">від ${o.order_date}</span>` : ''}</td>
+        <td>${badge}</td>
+        <td>${o.started_at}</td>
+        <td>${o.box || '—'}</td>
+        <td style="text-align:center">${o.items_count}</td>
+        <td style="text-align:center">${o.total_picked}</td>
+        <td style="text-align:center">${o.manual_count > 0 ? `<span style="color:#dc2626">${o.manual_count}</span>` : '0'}</td>
+      </tr>`;
+    }).join('');
+    document.getElementById('ordersModalContent').innerHTML = `
+      <table class="orders-table">
+        <thead><tr>
+          <th>Замовлення</th><th>Статус</th><th>Дата</th><th>Коробка</th>
           <th style="text-align:center">Позицій</th>
           <th style="text-align:center">Відібрано</th>
           <th style="text-align:center">Вручну</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } else {
+    // items / picked / manual — зведення по артикулах
+    const r = await fetch(`/api/report/items?${params}`);
+    let data = await r.json();
+
+    if (kpiType === 'manual') {
+      data = [...data].sort((a, b) => b.manual - a.manual).filter(d => d.manual > 0 || d.picked > 0);
+    }
+
+    if (!data.length) {
+      document.getElementById('ordersModalContent').innerHTML =
+        '<p style="color:#6b7280;text-align:center;padding:20px">Немає даних за цей період</p>';
+      document.getElementById('ordersModal').classList.remove('hidden');
+      return;
+    }
+
+    let thead = '';
+    let bodyRows = '';
+
+    if (kpiType === 'items') {
+      thead = `<tr>
+        <th>Артикул</th><th>Назва товару</th>
+        <th style="text-align:center">Відібрано</th>
+        <th style="text-align:center">Вручну</th>
+      </tr>`;
+      bodyRows = data.map(d => `<tr>
+        <td style="font-size:12px;color:#6b7280">${d.articl}</td>
+        <td>${d.name}</td>
+        <td style="text-align:center;font-weight:700;color:#2563eb">${d.picked}</td>
+        <td style="text-align:center;font-weight:700;color:${d.manual > 0 ? '#dc2626' : '#6b7280'}">${d.manual}</td>
+      </tr>`).join('');
+    } else if (kpiType === 'picked') {
+      thead = `<tr>
+        <th>Артикул</th><th>Назва товару</th>
+        <th style="text-align:center">Відібрано</th>
+      </tr>`;
+      bodyRows = data.map(d => `<tr>
+        <td style="font-size:12px;color:#6b7280">${d.articl}</td>
+        <td>${d.name}</td>
+        <td style="text-align:center;font-weight:700;color:#2563eb">${d.picked}</td>
+      </tr>`).join('');
+    } else if (kpiType === 'manual') {
+      thead = `<tr>
+        <th>Артикул</th><th>Назва товару</th>
+        <th style="text-align:center">Вручну</th>
+      </tr>`;
+      bodyRows = data.map(d => `<tr>
+        <td style="font-size:12px;color:#6b7280">${d.articl}</td>
+        <td>${d.name}</td>
+        <td style="text-align:center;font-weight:700;color:#dc2626">${d.manual}</td>
+      </tr>`).join('');
+    }
+
+    document.getElementById('ordersModalContent').innerHTML = `
+      <table class="orders-table">
+        <thead>${thead}</thead>
+        <tbody>${bodyRows}</tbody>
+      </table>`;
+  }
 
   document.getElementById('ordersModal').classList.remove('hidden');
 }

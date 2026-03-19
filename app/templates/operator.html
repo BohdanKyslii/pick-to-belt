@@ -506,17 +506,23 @@ function renderOrder(o) {
   if (o.status === 'pending') {
     if (stockIssues.length) {
       actions = `<div class="action-area">
+        <button class="btn btn-warning" style="width:100%"
+          onclick="openRestockModal(${o.id}, event)">📦 Поповнити товари</button>
         <div class="action-row">
-          <button class="btn btn-warning" style="flex:1"
-            onclick="openRestockModal(${o.id}, event)">📦 Поповнити товари</button>
+          <button class="btn btn-primary" style="flex:1"
+            onclick="startOrderWithCheck(${o.id})">🚀 Комплектація</button>
           <button class="btn btn-outline" style="flex:1"
-            onclick="startOrder(${o.id})">🚀 Зібрати, доложимо вручну</button>
+            onclick="startOrder(${o.id})">✋ Зібрати, доложимо вручну</button>
         </div>
       </div>`;
     } else {
       actions = `<div class="action-area">
-        <button class="btn btn-primary" style="padding:13px"
-          onclick="startOrder(${o.id})">🚀 Комплектація</button>
+        <div class="action-row">
+          <button class="btn btn-primary" style="flex:2;padding:13px"
+            onclick="startOrder(${o.id})">🚀 Комплектація</button>
+          <button class="btn btn-outline" style="flex:1"
+            onclick="startOrder(${o.id})">✋ Зібрати, доложимо вручну</button>
+        </div>
       </div>`;
     }
   } else if (o.status === 'picking') {
@@ -696,6 +702,19 @@ async function startOrder(orderId) {
     body: JSON.stringify({ box_id: boxId })
   });
   await loadOrders();
+}
+
+async function startOrderWithCheck(orderId) {
+  const order = orders.find(o => o.id === orderId);
+  if (order && getStockIssues(order).length > 0) {
+    const ok = confirm(
+      'Деякі товари мають нестачу.\n\n' +
+      'Натисніть OK щоб розпочати комплектацію (бракуючі позиції будуть вручну).\n' +
+      'Натисніть Скасувати щоб спочатку поповнити товари.'
+    );
+    if (!ok) return;
+  }
+  await startOrder(orderId);
 }
 
 async function packOrder(orderId) {

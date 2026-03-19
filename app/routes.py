@@ -616,6 +616,37 @@ def get_report_orders():
     return jsonify(result)
 
 
+@bp.route("/api/report/items")
+def get_report_items():
+    """Товари для KPI drill-down: зведення по артикулах за період."""
+    since, until = _report_date_range()
+    q = Order.query.filter(
+        Order.started_at >= since,
+        Order.status.in_(["packed", "done"])
+    )
+    if until:
+        q = q.filter(Order.started_at < until)
+    orders = q.all()
+
+    by_articl = {}
+    for o in orders:
+        for i in o.items:
+            if i.articl not in by_articl:
+                d = i.to_dict()
+                by_articl[i.articl] = {
+                    "articl": i.articl,
+                    "name": d["name"],
+                    "picked": 0,
+                    "manual": 0,
+                }
+            by_articl[i.articl]["picked"] += i.quantity_picked
+            if i.is_manual:
+                by_articl[i.articl]["manual"] += 1
+
+    result = sorted(by_articl.values(), key=lambda x: x["picked"], reverse=True)
+    return jsonify(result)
+
+
 @bp.route("/api/report/export")
 def export_report():
     """Вивантажити звіт у форматі Excel."""
