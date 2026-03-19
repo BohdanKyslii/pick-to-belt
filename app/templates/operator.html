@@ -776,11 +776,20 @@ function renderItemRow(item, order, isPicking) {
   else statusHtml = `<span class="item-status-pending">○</span>`;
 
   // Зібрано column
-  const pickedHtml = item.status === 'absent'
-    ? `<span style="color:#dc2626;font-size:11px">відсутній</span>`
-    : item.quantity_picked > 0
-      ? `<span style="color:#16a34a;font-weight:700">${item.quantity_picked}</span>`
-      : `<span style="color:#9ca3af">—</span>`;
+  let pickedHtml;
+  if (item.status === 'absent') {
+    if (item.quantity_picked > 0) {
+      const missing = item.quantity_ordered - item.quantity_picked;
+      pickedHtml = `<span style="color:#16a34a;font-weight:700">${item.quantity_picked}</span>`
+        + (missing > 0 ? `<br><span style="color:#dc2626;font-size:10px">❌ ${missing} відс.</span>` : '');
+    } else {
+      pickedHtml = `<span style="color:#dc2626;font-size:11px">❌ відсутній</span>`;
+    }
+  } else if (item.quantity_picked > 0) {
+    pickedHtml = `<span style="color:#16a34a;font-weight:700">${item.quantity_picked}</span>`;
+  } else {
+    pickedHtml = `<span style="color:#9ca3af">—</span>`;
+  }
 
   // Sticker + comment inline
   let extras = '';

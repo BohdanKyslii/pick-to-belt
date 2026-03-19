@@ -217,7 +217,7 @@ def mark_absent(order_id):
     if not item:
         return jsonify({"error": "Позицію не знайдено"}), 404
     item.status = "absent"
-    item.quantity_picked = 0
+    # quantity_picked не скидаємо — серво могло вже видати частину
     db.session.commit()
     return jsonify({"ok": True})
 
