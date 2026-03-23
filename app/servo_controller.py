@@ -117,23 +117,33 @@ def disable_channel(board_addr: int, channel: int) -> bool:
         return False
 
 
-def release_one(board_addr: int, channel: int) -> bool:
+def release_one(board_addr: int, channel: int,
+                open_angle: float = OPEN_ANGLE,
+                close_angle: float = CLOSE_ANGLE) -> bool:
+    """Один цикл видачі: close_angle → open_angle → close_angle → disable.
+    open_angle  — кут підйому механізму (налаштовується per-channel).
+    close_angle — початкове/закрите положення (налаштовується per-channel).
+    """
     _ensure_board(board_addr)
     try:
-        _set_pwm(board_addr, channel, OPEN_ANGLE)
+        _set_pwm(board_addr, channel, close_angle)
+        time.sleep(0.15)
+        _set_pwm(board_addr, channel, open_angle)
         time.sleep(HOLD_TIME)
-        _set_pwm(board_addr, channel, CLOSE_ANGLE)
+        _set_pwm(board_addr, channel, close_angle)
         time.sleep(0.3)
-        _disable_channel(board_addr, channel)  # вимкнути сигнал — серво не жужжить
+        _disable_channel(board_addr, channel)
         return True
     except Exception as e:
         logger.error(f"release_one error: {e}")
         return False
 
 
-def release_multiple(board_addr: int, channel: int, count: int) -> bool:
+def release_multiple(board_addr: int, channel: int, count: int,
+                     open_angle: float = OPEN_ANGLE,
+                     close_angle: float = CLOSE_ANGLE) -> bool:
     for i in range(count):
-        if not release_one(board_addr, channel):
+        if not release_one(board_addr, channel, open_angle, close_angle):
             return False
         if i < count - 1:
             time.sleep(0.5)

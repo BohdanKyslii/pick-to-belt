@@ -21,6 +21,9 @@ class Product(db.Model):
     # Параметри комірки
     cell_capacity = db.Column(db.Integer, default=10)
     cell_stock = db.Column(db.Integer, default=0)
+    # Кути серво (індивідуальні для кожного каналу)
+    servo_close_angle = db.Column(db.Float, default=0.0)   # початкове/закрите положення
+    servo_open_angle  = db.Column(db.Float, default=90.0)  # кут підйому/відкрите
     # Додаткові параметри
     photo = db.Column(db.String(300), default="")
     sticker_count = db.Column(db.Integer, default=0)
@@ -43,6 +46,8 @@ class Product(db.Model):
             "weight": self.weight,
             "cell_capacity": self.cell_capacity,
             "cell_stock": self.cell_stock,
+            "servo_close_angle": self.servo_close_angle if self.servo_close_angle is not None else 0.0,
+            "servo_open_angle":  self.servo_open_angle  if self.servo_open_angle  is not None else 90.0,
             "photo": self.photo,
             "sticker_count": self.sticker_count,
             "sticker_note": self.sticker_note,

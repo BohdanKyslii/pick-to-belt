@@ -179,7 +179,11 @@ def _pick_order(app, order_db_id: int):
             pick_count = min(need, available)
             manual_count = need - pick_count
 
-            servo.release_multiple(product.servo_board, product.servo_channel, pick_count)
+            servo.release_multiple(
+                product.servo_board, product.servo_channel, pick_count,
+                open_angle=product.servo_open_angle or 90.0,
+                close_angle=product.servo_close_angle or 0.0,
+            )
 
             product.cell_stock -= pick_count
             log = StockLog(
@@ -238,7 +242,11 @@ def release_servo_item(order_id):
         return jsonify({"error": "Комірка порожня"}), 400
 
     pick_count = min(need, available)
-    servo.release_multiple(product.servo_board, product.servo_channel, pick_count)
+    servo.release_multiple(
+        product.servo_board, product.servo_channel, pick_count,
+        open_angle=product.servo_open_angle or 90.0,
+        close_angle=product.servo_close_angle or 0.0,
+    )
 
     product.cell_stock -= pick_count
     item.quantity_picked += pick_count
@@ -1004,9 +1012,13 @@ def manual_trigger():
     if not (product.servo_board == 0x40 and 0 <= product.servo_channel <= 15):
         return jsonify({"error": "Товар не має прив'язки до серво-каналу"}), 400
 
-    # Спрацювати серво
+    # Спрацювати серво з індивідуальними кутами каналу
     try:
-        servo.release_multiple(product.servo_board, product.servo_channel, quantity)
+        servo.release_multiple(
+            product.servo_board, product.servo_channel, quantity,
+            open_angle=product.servo_open_angle or 90.0,
+            close_angle=product.servo_close_angle or 0.0,
+        )
     except Exception as e:
         return jsonify({"error": f"Помилка серво: {str(e)}"}), 500
 
@@ -1058,6 +1070,12 @@ def admin_test_servo():
         return jsonify({"error": "Невірний номер каналу"}), 400
 
     ch = int(channel)
+
+    # Беремо збережені кути з БД для цього каналу
+    product = Product.query.filter_by(servo_channel=ch, servo_board=0x40, is_active=True).first()
+    saved_open  = float(product.servo_open_angle  or 90.0) if product else 90.0
+    saved_close = float(product.servo_close_angle or 0.0)  if product else 0.0
+
     try:
         if mode == "angle":
             angle = float(data.get("angle", 90))
@@ -1065,11 +1083,44 @@ def admin_test_servo():
             servo.set_angle(0x40, ch, angle)
         elif mode == "disable":
             servo.disable_channel(0x40, ch)
-        else:  # cycle
-            servo.release_one(0x40, ch)
+        else:  # cycle — використовує збережені кути каналу
+            servo.release_one(0x40, ch, open_angle=saved_open, close_angle=saved_close)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    return jsonify({"ok": True, "simulation": servo.is_simulation()})
+    return jsonify({
+        "ok": True,
+        "simulation": servo.is_simulation(),
+        "saved_open": saved_open,
+        "saved_close": saved_close,
+    })
+
+
+@bp.route("/api/admin/save_servo_angles", methods=["POST"])
+def admin_save_servo_angles():
+    """Зберегти кути серво для каналу (без логування в аналітику)."""
+    data = request.get_json() or {}
+    channel = data.get("channel")
+    if channel is None or not (0 <= int(channel) <= 15):
+        return jsonify({"error": "Невірний номер каналу"}), 400
+
+    product = Product.query.filter_by(
+        servo_channel=int(channel), servo_board=0x40, is_active=True
+    ).first()
+    if not product:
+        return jsonify({"error": "Товар для цього каналу не знайдено"}), 404
+
+    close_angle = data.get("close_angle")
+    open_angle  = data.get("open_angle")
+    if close_angle is not None:
+        product.servo_close_angle = max(0.0, min(180.0, float(close_angle)))
+    if open_angle is not None:
+        product.servo_open_angle  = max(0.0, min(180.0, float(open_angle)))
+    db.session.commit()
+    return jsonify({
+        "ok": True,
+        "close_angle": product.servo_close_angle,
+        "open_angle":  product.servo_open_angle,
+    })
 
 
 # ─── API: Налаштування / PIN адміністратора ────────────────────────────────────

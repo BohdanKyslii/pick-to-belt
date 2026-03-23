@@ -148,12 +148,17 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .search-bar input:focus { border-color:var(--primary); }
 
 /* Servo calibration modal */
-.angle-display { font-size:48px;font-weight:800;text-align:center;color:var(--primary);
-                 line-height:1;margin:8px 0; }
-.angle-unit { font-size:18px;color:var(--gray); }
-.angle-slider { width:100%;accent-color:var(--primary);height:6px;cursor:pointer;margin:10px 0; }
-.angle-presets { display:flex;gap:6px;flex-wrap:wrap;margin:8px 0; }
-.angle-presets button { flex:1;min-width:50px;padding:6px;font-size:12px;font-weight:700;
+.cal-section { background:#f8fafc;border-radius:10px;padding:12px;margin-bottom:10px;
+               border:1.5px solid #e5e7eb; }
+.cal-section-title { font-size:13px;font-weight:700;color:#1f2937;margin-bottom:4px; }
+.cal-saved-badge { font-size:11px;font-weight:600;background:#dbeafe;color:#1d4ed8;
+                   padding:1px 7px;border-radius:10px;margin-left:6px; }
+.angle-display { font-size:42px;font-weight:800;text-align:center;color:var(--primary);
+                 line-height:1;margin:6px 0; }
+.angle-unit { font-size:16px;color:var(--gray); }
+.angle-slider { width:100%;accent-color:var(--primary);height:6px;cursor:pointer;margin:8px 0; }
+.angle-presets { display:flex;gap:5px;flex-wrap:wrap;margin:6px 0; }
+.angle-presets button { flex:1;min-width:40px;padding:5px;font-size:12px;font-weight:700;
                         border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer; }
 .angle-presets button:hover { border-color:var(--primary);color:var(--primary); }
 .servo-status { font-size:12px;text-align:center;padding:6px;border-radius:6px;margin-top:6px; }
@@ -356,34 +361,64 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 
 <!-- Modal: калібрування серво -->
 <div id="servoCalModal" class="modal-overlay hidden">
-  <div class="modal" style="max-width:380px">
-    <h3 id="servoCalTitle">🎛️ Калібрування серво — Канал 0</h3>
-    <p style="font-size:12px;color:#6b7280;margin-bottom:12px">
-      Встановлюйте кут — серво утримує позицію. Налаштування не записуються в аналітику.
+  <div class="modal" style="max-width:420px">
+    <h3 id="servoCalTitle">⚙️ Калібрування — Канал 0</h3>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:14px">
+      Налаштуйте два кути для цього каналу. Зміни не записуються в аналітику.
     </p>
 
-    <div class="angle-display">
-      <span id="calAngleVal">90</span><span class="angle-unit">°</span>
+    <!-- СЕКЦІЯ 1: Початкова позиція (закрита) -->
+    <div class="cal-section">
+      <div class="cal-section-title">
+        🔒 Початкова позиція <span class="cal-saved-badge" id="savedCloseLabel"></span>
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-bottom:8px">
+        Положення серво в стані спокою (закрито). Підбери так, щоб механізм рівно лежав.
+      </p>
+      <div class="angle-display"><span id="calCloseVal">0</span><span class="angle-unit">°</span></div>
+      <input type="range" id="calCloseSlider" class="angle-slider" min="0" max="180" value="0"
+        oninput="document.getElementById('calCloseVal').textContent=this.value">
+      <div class="angle-presets">
+        <button onclick="setClose(0)">0°</button>
+        <button onclick="setClose(15)">15°</button>
+        <button onclick="setClose(30)">30°</button>
+        <button onclick="setClose(45)">45°</button>
+        <button onclick="setClose(90)">90°</button>
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px"
+        onclick="applyAngle('close')">📐 Перевірити (серво тримає цей кут)</button>
     </div>
-    <input type="range" id="calAngleSlider" class="angle-slider" min="0" max="180" value="90"
-      oninput="onSliderInput(this.value)">
 
-    <div class="angle-presets">
-      <button onclick="setPresetAngle(0)">0°</button>
-      <button onclick="setPresetAngle(45)">45°</button>
-      <button onclick="setPresetAngle(90)">90°</button>
-      <button onclick="setPresetAngle(135)">135°</button>
-      <button onclick="setPresetAngle(180)">180°</button>
+    <!-- СЕКЦІЯ 2: Кут підйому (відкрита) -->
+    <div class="cal-section">
+      <div class="cal-section-title">
+        🔓 Кут підйому <span class="cal-saved-badge" id="savedOpenLabel"></span>
+      </div>
+      <p style="font-size:11px;color:#6b7280;margin-bottom:8px">
+        Кут до якого серво піднімає механізм для видачі товару.
+      </p>
+      <div class="angle-display"><span id="calOpenVal">90</span><span class="angle-unit">°</span></div>
+      <input type="range" id="calOpenSlider" class="angle-slider" min="0" max="180" value="90"
+        oninput="document.getElementById('calOpenVal').textContent=this.value">
+      <div class="angle-presets">
+        <button onclick="setOpen(45)">45°</button>
+        <button onclick="setOpen(60)">60°</button>
+        <button onclick="setOpen(90)">90°</button>
+        <button onclick="setOpen(120)">120°</button>
+        <button onclick="setOpen(150)">150°</button>
+      </div>
+      <button class="btn btn-outline btn-sm" style="width:100%;margin-top:6px"
+        onclick="applyAngle('open')">📐 Перевірити (серво тримає цей кут)</button>
     </div>
 
-    <div id="servoCalStatus" class="servo-status idle">⬜ Серво вільне</div>
+    <div id="servoCalStatus" class="servo-status idle" style="margin-top:6px">⬜ Серво вільне</div>
 
     <div class="modal-actions" style="flex-wrap:wrap;gap:6px;margin-top:12px">
-      <button class="btn btn-primary" style="flex:1" onclick="applyCalAngle()">
-        📐 Встановити кут
+      <button class="btn btn-success" style="flex:2" onclick="saveServoAngles()">
+        💾 Зберегти кути
       </button>
       <button class="btn btn-warning" style="flex:1" onclick="runCalCycle()">
-        🔄 Повний цикл
+        🔄 Тест циклу
       </button>
       <button class="btn btn-outline" style="flex:1" onclick="disableCalServo()">
         ⬜ Відпустити
@@ -536,14 +571,22 @@ let calChannel = null;
 function openServoCalModal(channel, articl) {
   calChannel = channel;
   document.getElementById('servoCalTitle').textContent = `⚙️ Калібрування — Канал ${channel} (${articl})`;
-  document.getElementById('calAngleSlider').value = 90;
-  document.getElementById('calAngleVal').textContent = '90';
+  // Беремо збережені кути з даних продукту
+  const p = products.find(x => x.servo_channel === channel && x.servo_board === '0x40');
+  const savedClose = p ? (p.servo_close_angle ?? 0)  : 0;
+  const savedOpen  = p ? (p.servo_open_angle  ?? 90) : 90;
+  // Встановлюємо слайдери на збережені значення
+  document.getElementById('calCloseSlider').value = savedClose;
+  document.getElementById('calCloseVal').textContent = savedClose;
+  document.getElementById('calOpenSlider').value = savedOpen;
+  document.getElementById('calOpenVal').textContent = savedOpen;
+  document.getElementById('savedCloseLabel').textContent = `збережено: ${savedClose}°`;
+  document.getElementById('savedOpenLabel').textContent  = `збережено: ${savedOpen}°`;
   setServoCalStatus('idle', '⬜ Серво вільне');
   document.getElementById('servoCalModal').classList.remove('hidden');
 }
 
 function closeServoCalModal() {
-  // При закритті — відпускаємо серво щоб не жужжало
   if (calChannel !== null) {
     fetch('/api/admin/test_servo', {
       method: 'POST',
@@ -555,13 +598,14 @@ function closeServoCalModal() {
   calChannel = null;
 }
 
-function onSliderInput(val) {
-  document.getElementById('calAngleVal').textContent = val;
+function setClose(angle) {
+  document.getElementById('calCloseSlider').value = angle;
+  document.getElementById('calCloseVal').textContent = angle;
 }
 
-function setPresetAngle(angle) {
-  document.getElementById('calAngleSlider').value = angle;
-  document.getElementById('calAngleVal').textContent = angle;
+function setOpen(angle) {
+  document.getElementById('calOpenSlider').value = angle;
+  document.getElementById('calOpenVal').textContent = angle;
 }
 
 function setServoCalStatus(type, text) {
@@ -570,25 +614,27 @@ function setServoCalStatus(type, text) {
   el.textContent = text;
 }
 
-async function applyCalAngle() {
-  const angle = parseInt(document.getElementById('calAngleSlider').value);
-  setServoCalStatus('holding', `⏳ Встановлюємо ${angle}°...`);
+async function applyAngle(which) {
+  const angle = parseInt(
+    document.getElementById(which === 'close' ? 'calCloseSlider' : 'calOpenSlider').value
+  );
+  const label = which === 'close' ? 'початкова позиція' : 'кут підйому';
+  setServoCalStatus('holding', `⏳ Встановлюємо ${label} ${angle}°...`);
   const r = await fetch('/api/admin/test_servo', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ channel: calChannel, mode: 'angle', angle })
   });
   const d = await r.json();
-  if (!r.ok) {
-    setServoCalStatus('idle', `❌ Помилка: ${d.error}`);
-    return;
-  }
+  if (!r.ok) { setServoCalStatus('idle', `❌ ${d.error}`); return; }
   const sim = d.simulation ? ' [симуляція]' : '';
-  setServoCalStatus('holding', `✅ Утримує ${angle}°${sim} — натисніть «Відпустити» після перевірки`);
+  setServoCalStatus('holding', `✅ Утримує ${angle}° (${label})${sim} — натисніть «Відпустити» після перевірки`);
 }
 
 async function runCalCycle() {
-  setServoCalStatus('holding', '⏳ Виконується цикл відкрити→закрити...');
+  const closeAngle = parseInt(document.getElementById('calCloseSlider').value);
+  const openAngle  = parseInt(document.getElementById('calOpenSlider').value);
+  setServoCalStatus('holding', `⏳ Цикл: ${closeAngle}° → ${openAngle}° → ${closeAngle}°...`);
   const r = await fetch('/api/admin/test_servo', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -596,7 +642,7 @@ async function runCalCycle() {
   });
   const d = await r.json();
   const sim = d.simulation ? ' [симуляція]' : '';
-  setServoCalStatus('idle', `✅ Цикл виконано${sim}`);
+  setServoCalStatus('idle', `✅ Цикл виконано (${d.saved_close}°→${d.saved_open}°→${d.saved_close}°)${sim}`);
 }
 
 async function disableCalServo() {
@@ -606,6 +652,29 @@ async function disableCalServo() {
     body: JSON.stringify({ channel: calChannel, mode: 'disable' })
   });
   setServoCalStatus('idle', '⬜ Серво відпущено');
+}
+
+async function saveServoAngles() {
+  const closeAngle = parseInt(document.getElementById('calCloseSlider').value);
+  const openAngle  = parseInt(document.getElementById('calOpenSlider').value);
+  if (closeAngle >= openAngle) {
+    setServoCalStatus('idle', '❌ Кут підйому має бути більший за початкову позицію');
+    return;
+  }
+  setServoCalStatus('idle', '⏳ Зберігаємо...');
+  const r = await fetch('/api/admin/save_servo_angles', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel: calChannel, close_angle: closeAngle, open_angle: openAngle })
+  });
+  const d = await r.json();
+  if (!r.ok) { setServoCalStatus('idle', `❌ ${d.error}`); return; }
+  // Оновлюємо локальні дані продукту
+  const p = products.find(x => x.servo_channel === calChannel && x.servo_board === '0x40');
+  if (p) { p.servo_close_angle = d.close_angle; p.servo_open_angle = d.open_angle; }
+  document.getElementById('savedCloseLabel').textContent = `збережено: ${d.close_angle}°`;
+  document.getElementById('savedOpenLabel').textContent  = `збережено: ${d.open_angle}°`;
+  setServoCalStatus('idle', `✅ Збережено: початок ${d.close_angle}°, підйом ${d.open_angle}°`);
 }
 
 async function init() {

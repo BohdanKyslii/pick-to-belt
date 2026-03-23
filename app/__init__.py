@@ -42,6 +42,8 @@ def _run_migrations():
         "ALTER TABLE orders ADD COLUMN comment TEXT DEFAULT ''",
         "ALTER TABLE order_items ADD COLUMN extra_comment TEXT DEFAULT ''",
         "ALTER TABLE stock_log ADD COLUMN log_type TEXT DEFAULT 'pick'",
+        "ALTER TABLE products ADD COLUMN servo_close_angle REAL DEFAULT 0.0",
+        "ALTER TABLE products ADD COLUMN servo_open_angle REAL DEFAULT 90.0",
     ]
     for sql in migrations:
         try:
