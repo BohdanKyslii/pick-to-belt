@@ -91,6 +91,32 @@ def _disable_channel(board_addr: int, channel: int):
         logger.error(f"disable_channel error: {e}")
 
 
+def set_angle(board_addr: int, channel: int, angle: float) -> bool:
+    """Встановити кут серво і утримувати (без вимкнення PWM).
+    Використовується для калібрування — серво тримає позицію.
+    Щоб відпустити — викликати disable_channel().
+    """
+    _ensure_board(board_addr)
+    try:
+        _set_pwm(board_addr, channel, angle)
+        logger.info(f"set_angle board={hex(board_addr)} ch={channel} angle={angle}")
+        return True
+    except Exception as e:
+        logger.error(f"set_angle error: {e}")
+        return False
+
+
+def disable_channel(board_addr: int, channel: int) -> bool:
+    """Вимкнути PWM на каналі — серво відпускається, не жужжить."""
+    _ensure_board(board_addr)
+    try:
+        _disable_channel(board_addr, channel)
+        return True
+    except Exception as e:
+        logger.error(f"disable_channel error: {e}")
+        return False
+
+
 def release_one(board_addr: int, channel: int) -> bool:
     _ensure_board(board_addr)
     try:

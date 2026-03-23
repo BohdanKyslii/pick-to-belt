@@ -1040,6 +1040,38 @@ def manual_trigger():
     })
 
 
+# ─── API: Тест серво (без запису в лог) ───────────────────────────────────────
+
+@bp.route("/api/admin/test_servo", methods=["POST"])
+def admin_test_servo():
+    """Калібрування серво — встановити кут і тримати, або повний цикл.
+    БЕЗ запису в ManualTriggerLog і StockLog.
+    mode='angle': встановити кут angle° і утримувати (для калібрування)
+    mode='cycle': повний цикл відкрити→закрити (стандартний тест)
+    mode='disable': вимкнути PWM (відпустити серво)
+    """
+    data = request.get_json() or {}
+    channel = data.get("channel")
+    mode = data.get("mode", "cycle")
+
+    if channel is None or not (0 <= int(channel) <= 15):
+        return jsonify({"error": "Невірний номер каналу"}), 400
+
+    ch = int(channel)
+    try:
+        if mode == "angle":
+            angle = float(data.get("angle", 90))
+            angle = max(0.0, min(180.0, angle))
+            servo.set_angle(0x40, ch, angle)
+        elif mode == "disable":
+            servo.disable_channel(0x40, ch)
+        else:  # cycle
+            servo.release_one(0x40, ch)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"ok": True, "simulation": servo.is_simulation()})
+
+
 # ─── API: Налаштування / PIN адміністратора ────────────────────────────────────
 
 def _get_admin_pin():

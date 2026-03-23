@@ -146,6 +146,19 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 .search-bar input { flex:1;padding:7px 10px;border-radius:8px;border:1.5px solid #d1d5db;
                     font-size:14px;outline:none; }
 .search-bar input:focus { border-color:var(--primary); }
+
+/* Servo calibration modal */
+.angle-display { font-size:48px;font-weight:800;text-align:center;color:var(--primary);
+                 line-height:1;margin:8px 0; }
+.angle-unit { font-size:18px;color:var(--gray); }
+.angle-slider { width:100%;accent-color:var(--primary);height:6px;cursor:pointer;margin:10px 0; }
+.angle-presets { display:flex;gap:6px;flex-wrap:wrap;margin:8px 0; }
+.angle-presets button { flex:1;min-width:50px;padding:6px;font-size:12px;font-weight:700;
+                        border-radius:8px;border:1.5px solid #d1d5db;background:#fff;cursor:pointer; }
+.angle-presets button:hover { border-color:var(--primary);color:var(--primary); }
+.servo-status { font-size:12px;text-align:center;padding:6px;border-radius:6px;margin-top:6px; }
+.servo-status.holding { background:#d1fae5;color:#065f46; }
+.servo-status.idle    { background:#f3f4f6;color:#6b7280; }
 </style>
 </head>
 <body>
@@ -341,6 +354,47 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   </div>
 </div>
 
+<!-- Modal: калібрування серво -->
+<div id="servoCalModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:380px">
+    <h3 id="servoCalTitle">🎛️ Калібрування серво — Канал 0</h3>
+    <p style="font-size:12px;color:#6b7280;margin-bottom:12px">
+      Встановлюйте кут — серво утримує позицію. Налаштування не записуються в аналітику.
+    </p>
+
+    <div class="angle-display">
+      <span id="calAngleVal">90</span><span class="angle-unit">°</span>
+    </div>
+    <input type="range" id="calAngleSlider" class="angle-slider" min="0" max="180" value="90"
+      oninput="onSliderInput(this.value)">
+
+    <div class="angle-presets">
+      <button onclick="setPresetAngle(0)">0°</button>
+      <button onclick="setPresetAngle(45)">45°</button>
+      <button onclick="setPresetAngle(90)">90°</button>
+      <button onclick="setPresetAngle(135)">135°</button>
+      <button onclick="setPresetAngle(180)">180°</button>
+    </div>
+
+    <div id="servoCalStatus" class="servo-status idle">⬜ Серво вільне</div>
+
+    <div class="modal-actions" style="flex-wrap:wrap;gap:6px;margin-top:12px">
+      <button class="btn btn-primary" style="flex:1" onclick="applyCalAngle()">
+        📐 Встановити кут
+      </button>
+      <button class="btn btn-warning" style="flex:1" onclick="runCalCycle()">
+        🔄 Повний цикл
+      </button>
+      <button class="btn btn-outline" style="flex:1" onclick="disableCalServo()">
+        ⬜ Відпустити
+      </button>
+      <button class="btn btn-ghost" style="flex:2" onclick="closeServoCalModal()">
+        Закрити
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal: PIN-захист адмін -->
 <div id="pinModal" class="modal-overlay" style="display:flex;background:rgba(0,0,0,.6);z-index:9999">
   <div class="modal" style="max-width:360px">
@@ -475,6 +529,85 @@ async function savePin() {
   }
 }
 
+// ─── Калібрування серво ───────────────────────────────────────────────────────
+
+let calChannel = null;
+
+function openServoCalModal(channel, articl) {
+  calChannel = channel;
+  document.getElementById('servoCalTitle').textContent = `⚙️ Калібрування — Канал ${channel} (${articl})`;
+  document.getElementById('calAngleSlider').value = 90;
+  document.getElementById('calAngleVal').textContent = '90';
+  setServoCalStatus('idle', '⬜ Серво вільне');
+  document.getElementById('servoCalModal').classList.remove('hidden');
+}
+
+function closeServoCalModal() {
+  // При закритті — відпускаємо серво щоб не жужжало
+  if (calChannel !== null) {
+    fetch('/api/admin/test_servo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: calChannel, mode: 'disable' })
+    });
+  }
+  document.getElementById('servoCalModal').classList.add('hidden');
+  calChannel = null;
+}
+
+function onSliderInput(val) {
+  document.getElementById('calAngleVal').textContent = val;
+}
+
+function setPresetAngle(angle) {
+  document.getElementById('calAngleSlider').value = angle;
+  document.getElementById('calAngleVal').textContent = angle;
+}
+
+function setServoCalStatus(type, text) {
+  const el = document.getElementById('servoCalStatus');
+  el.className = `servo-status ${type}`;
+  el.textContent = text;
+}
+
+async function applyCalAngle() {
+  const angle = parseInt(document.getElementById('calAngleSlider').value);
+  setServoCalStatus('holding', `⏳ Встановлюємо ${angle}°...`);
+  const r = await fetch('/api/admin/test_servo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel: calChannel, mode: 'angle', angle })
+  });
+  const d = await r.json();
+  if (!r.ok) {
+    setServoCalStatus('idle', `❌ Помилка: ${d.error}`);
+    return;
+  }
+  const sim = d.simulation ? ' [симуляція]' : '';
+  setServoCalStatus('holding', `✅ Утримує ${angle}°${sim} — натисніть «Відпустити» після перевірки`);
+}
+
+async function runCalCycle() {
+  setServoCalStatus('holding', '⏳ Виконується цикл відкрити→закрити...');
+  const r = await fetch('/api/admin/test_servo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel: calChannel, mode: 'cycle' })
+  });
+  const d = await r.json();
+  const sim = d.simulation ? ' [симуляція]' : '';
+  setServoCalStatus('idle', `✅ Цикл виконано${sim}`);
+}
+
+async function disableCalServo() {
+  await fetch('/api/admin/test_servo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ channel: calChannel, mode: 'disable' })
+  });
+  setServoCalStatus('idle', '⬜ Серво відпущено');
+}
+
 async function init() {
   await checkPinRequired();
   await loadProducts();
@@ -516,7 +649,12 @@ function renderCell(ch, product) {
     : '';
 
   return `<div class="cell-card" onclick="openProductModal(${JSON.stringify(product).replace(/"/g,'&quot;')}, ${ch})">
-    <div class="cell-num">Канал ${ch}</div>
+    <div class="cell-num" style="display:flex;justify-content:space-between;align-items:center">
+      <span>Канал ${ch}</span>
+      <button class="btn btn-ghost btn-sm" title="Калібрування серво (без запису)"
+        style="padding:1px 6px;font-size:11px;color:#6b7280"
+        onclick="event.stopPropagation();openServoCalModal(${ch}, '${(product.articl||'').replace(/'/g,"\\'")}')">⚙️ Кут</button>
+    </div>
     <div class="cell-art">${product.articl}</div>
     <div class="cell-name">${product.name || '—'}</div>
     <div class="cell-stock">
