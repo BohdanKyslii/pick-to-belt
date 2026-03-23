@@ -262,6 +262,53 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 .cells-table th.sortable:hover { color: var(--primary); }
 .sort-arrow { margin-left: 3px; font-size: 10px; opacity: .4; }
 .sort-arrow.active { opacity: 1; color: var(--primary); }
+
+/* ═══ РУЧНА ЗБІРКА ═══ */
+.manual-session-panel { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px 16px; margin-bottom: 14px; }
+.manual-session-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.manual-session-title { font-size: 14px; font-weight: 700; color: #1f2937; }
+.manual-session-actions { display: flex; gap: 6px; }
+.active-session-info { background: #f0f4f8; border-radius: 8px; padding: 10px 14px;
+  font-size: 13px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.active-session-info.has-session { background: #d1fae5; }
+.active-session-name { font-weight: 700; color: #065f46; font-size: 14px; }
+.no-session-msg { color: #d97706; font-weight: 600; }
+.sessions-list { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
+.session-row { display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+  border-radius: 8px; background: #f9fafb; border: 1.5px solid #e5e7eb; cursor: pointer;
+  transition: .15s; font-size: 13px; }
+.session-row:hover { border-color: var(--primary); background: #eff6ff; }
+.session-row.active-row { border-color: var(--success); background: #d1fae5; }
+.session-row.closed-row { opacity: .6; cursor: default; }
+.session-row-name { flex: 1; font-weight: 600; }
+.session-row-meta { font-size: 11px; color: var(--gray); }
+.session-row-badge { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 600; }
+.badge-open { background: #d1fae5; color: #065f46; }
+.badge-closed { background: #f3f4f6; color: #6b7280; }
+
+.manual-channels-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+.channel-btn { background: #fff; border: 2px solid #e5e7eb; border-radius: var(--radius);
+  padding: 12px; cursor: pointer; transition: .15s; text-align: left; position: relative; }
+.channel-btn:hover:not(:disabled) { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.channel-btn:disabled { opacity: .45; cursor: not-allowed; }
+.channel-btn-num { font-size: 11px; color: var(--gray); margin-bottom: 3px; font-weight: 600; }
+.channel-btn-art { font-size: 13px; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.channel-btn-name { font-size: 11px; color: #6b7280; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.channel-btn-stock { font-size: 11px; margin-top: 6px; color: var(--success); font-weight: 600; }
+.channel-btn-stock.low { color: #d97706; }
+.channel-btn-stock.empty { color: var(--danger); }
+.channel-btn-img { width: 100%; height: 50px; object-fit: cover; border-radius: 6px; margin-top: 6px; }
+
+.manual-log-list { display: flex; flex-direction: column; gap: 6px; }
+.manual-log-row { background: #fff; border-radius: 8px; padding: 8px 14px;
+  box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.manual-log-ch { font-size: 11px; background: #eff6ff; color: var(--primary);
+  padding: 2px 8px; border-radius: 12px; font-weight: 700; white-space: nowrap; }
+.manual-log-art { font-weight: 700; color: #1f2937; }
+.manual-log-name { color: var(--gray); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.manual-log-qty { font-weight: 700; color: var(--success); white-space: nowrap; }
+.manual-log-time { font-size: 11px; color: #9ca3af; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -286,6 +333,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   <button class="tab-btn" id="tab-btn-cells" onclick="switchTab('cells')">📦 Залишки по Коміркам</button>
   <button class="tab-btn" id="tab-btn-pending" onclick="switchTab('pending')">🚀 Замовлення до Комплектації</button>
   <button class="tab-btn" id="tab-btn-completed" onclick="switchTab('completed')">✅ Виконані замовлення</button>
+  <button class="tab-btn" id="tab-btn-manual" onclick="switchTab('manual')">🔧 Ручна збірка</button>
 </div>
 
 <div id="tab-section-orders">
@@ -337,6 +385,82 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   <div class="orders-list">
     <div class="section-label"><span>✅ Виконані замовлення</span><hr></div>
     <div id="completedList"><div class="loading">Завантаження...</div></div>
+  </div>
+</div>
+
+<!-- ═══ ТАБ: РУЧНА ЗБІРКА ═══ -->
+<div id="tab-section-manual" class="hidden">
+  <div class="orders-list">
+
+    <!-- Блок вибору/створення події -->
+    <div class="manual-session-panel">
+      <div class="manual-session-header">
+        <div class="manual-session-title">📋 Поточна подія</div>
+        <div class="manual-session-actions">
+          <button class="btn btn-outline btn-sm" onclick="openCreateSessionModal()">＋ Нова подія</button>
+          <button class="btn btn-ghost btn-sm" onclick="loadManualSessions()">🔄</button>
+        </div>
+      </div>
+      <div id="activeSessionInfo" class="active-session-info">
+        <span class="no-session-msg">⚠️ Оберіть або створіть подію перед початком збірки</span>
+      </div>
+      <div id="sessionsList" class="sessions-list" style="display:none"></div>
+      <button class="btn btn-ghost btn-sm" id="toggleSessionsBtn" onclick="toggleSessionsList()" style="margin-top:6px;font-size:12px">
+        📂 Показати всі події
+      </button>
+    </div>
+
+    <!-- Кнопки каналів серво -->
+    <div class="section-label"><span>🎛️ Канали серво</span><hr></div>
+    <div id="manualChannelsGrid" class="manual-channels-grid">
+      <div class="loading">Завантаження каналів...</div>
+    </div>
+
+    <!-- Лог поточної сесії -->
+    <div id="manualSessionLogSection" class="hidden">
+      <div class="section-label" style="margin-top:16px"><span>📜 Лог поточної події</span><hr></div>
+      <div id="manualSessionLog" class="manual-log-list"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal: нова подія -->
+<div id="createSessionModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3>📋 Нова подія збірки</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px">
+      Вкажіть назву події. Усі спрацювання серво будуть записані під цією назвою для аналітики.
+    </p>
+    <div class="fg">
+      <label>Назва події</label>
+      <input type="text" id="newSessionName" placeholder="напр. Поповнення стелажу A, Тест каналу 3..." style="width:100%">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="createSession()">✅ Створити та активувати</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: підтвердження спрацювання серво вручну -->
+<div id="manualTriggerModal" class="modal-overlay hidden">
+  <div class="modal">
+    <h3 id="triggerModalTitle">🎛️ Спрацювати серво</h3>
+    <p id="triggerModalText" style="font-size:13px;color:#374151;margin-bottom:12px"></p>
+    <div class="fg" style="margin-bottom:12px">
+      <label>Кількість (шт.)</label>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+        <button class="btn btn-outline btn-sm" onclick="adjustTriggerQty(-1)">−</button>
+        <input type="number" id="triggerQty" min="1" max="50" value="1"
+               style="width:70px;text-align:center;padding:6px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;font-weight:700">
+        <button class="btn btn-outline btn-sm" onclick="adjustTriggerQty(1)">＋</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-success" onclick="confirmTrigger()">🚀 Запустити</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Скасувати</button>
+    </div>
   </div>
 </div>
 
@@ -484,7 +608,7 @@ async function init() {
   await loadOrders();
   await checkSimulation();
   // Ensure only orders tab is visible initially
-  ['cells','pending','completed'].forEach(t => {
+  ['cells','pending','completed','manual'].forEach(t => {
     document.getElementById(`tab-section-${t}`).classList.add('hidden');
     document.getElementById(`tab-btn-${t}`).classList.remove('active');
   });
@@ -522,7 +646,7 @@ async function loadFromJson() {
 }
 
 async function switchTab(tab) {
-  const tabs = ['orders', 'cells', 'pending', 'completed'];
+  const tabs = ['orders', 'cells', 'pending', 'completed', 'manual'];
   tabs.forEach(t => {
     document.getElementById(`tab-section-${t}`).classList.toggle('hidden', t !== tab);
     document.getElementById(`tab-btn-${t}`).classList.toggle('active', t === tab);
@@ -531,6 +655,7 @@ async function switchTab(tab) {
   if (tab === 'cells') await loadCellsOverview();
   else if (tab === 'pending') await loadAllPendingOrders();
   else if (tab === 'completed') await loadCompletedOrders();
+  else if (tab === 'manual') await loadManualTab();
 }
 
 async function loadCompletedOrders() {
@@ -1387,6 +1512,231 @@ function closeAllModals() {
   currentDeleteOrderId = null;
   currentRestoreOrderId = null;
   restockItems = [];
+  pendingTriggerArticl = null;
+}
+
+// ─── РУЧНА ЗБІРКА ─────────────────────────────────────────────────────────────
+
+let activeManualSession = null;
+let manualChannels = [];
+let pendingTriggerArticl = null;
+let sessionsListVisible = false;
+
+async function loadManualTab() {
+  await Promise.all([loadManualChannels(), loadManualSessions()]);
+}
+
+async function loadManualChannels() {
+  const r = await fetch('/api/manual/channels');
+  manualChannels = await r.json();
+  renderManualChannels();
+}
+
+function renderManualChannels() {
+  const grid = document.getElementById('manualChannelsGrid');
+  if (!manualChannels.length) {
+    grid.innerHTML = '<div class="loading">Немає товарів з каналами серво. Налаштуйте комірки в розділі ⚙️ Налаштування.</div>';
+    return;
+  }
+  grid.innerHTML = manualChannels.map(p => {
+    const stockClass = p.cell_stock === 0 ? 'empty' : (p.cell_stock <= 3 ? 'low' : '');
+    const stockLabel = p.cell_stock === 0 ? '❌ Порожня' : `📦 ${p.cell_stock} шт.`;
+    const imgHtml = p.photo
+      ? `<img src="/static/uploads/${p.photo}" class="channel-btn-img" onerror="this.style.display='none'">`
+      : '';
+    return `<button class="channel-btn" onclick="openTriggerModal('${p.articl}', ${p.channel}, '${p.name.replace(/'/g,"\\'")}')">
+      <div class="channel-btn-num">Канал ${p.channel}</div>
+      <div class="channel-btn-art">${p.articl}</div>
+      <div class="channel-btn-name">${p.name}</div>
+      <div class="channel-btn-stock ${stockClass}">${stockLabel}</div>
+      ${imgHtml}
+    </button>`;
+  }).join('');
+}
+
+async function loadManualSessions() {
+  const r = await fetch('/api/manual/sessions');
+  const sessions = await r.json();
+  renderSessionsList(sessions);
+  renderActiveSession();
+}
+
+function renderSessionsList(sessions) {
+  const list = document.getElementById('sessionsList');
+  if (!sessions.length) {
+    list.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px">Немає записаних подій</div>';
+    return;
+  }
+  list.innerHTML = sessions.map(s => {
+    const isActive = activeManualSession && activeManualSession.id === s.id;
+    const rowClass = isActive ? 'active-row' : (s.is_closed ? 'closed-row' : '');
+    const badge = s.is_closed
+      ? '<span class="session-row-badge badge-closed">Закрита</span>'
+      : '<span class="session-row-badge badge-open">Відкрита</span>';
+    const closeBtn = (!s.is_closed && !isActive)
+      ? `<button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();closeSession(${s.id})" title="Закрити подію" style="padding:2px 6px">✕</button>`
+      : '';
+    return `<div class="session-row ${rowClass}" onclick="${s.is_closed ? '' : `selectSession(${JSON.stringify(s)})`}">
+      <div class="session-row-name">${s.name}</div>
+      <div class="session-row-meta">${s.total_qty} шт. / ${s.total_triggers} тригерів</div>
+      ${badge}
+      ${closeBtn}
+    </div>`;
+  }).join('');
+}
+
+function renderActiveSession() {
+  const info = document.getElementById('activeSessionInfo');
+  const logSection = document.getElementById('manualSessionLogSection');
+  if (!activeManualSession) {
+    info.className = 'active-session-info';
+    info.innerHTML = '<span class="no-session-msg">⚠️ Оберіть або створіть подію перед початком збірки</span>';
+    logSection.classList.add('hidden');
+    return;
+  }
+  info.className = 'active-session-info has-session';
+  info.innerHTML = `
+    <div>
+      <div class="active-session-name">✅ ${activeManualSession.name}</div>
+      <div style="font-size:12px;color:#065f46;margin-top:2px">
+        ${activeManualSession.total_qty} шт. зібрано • ${activeManualSession.total_triggers} тригерів
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="closeSession(${activeManualSession.id})">🔒 Закрити подію</button>
+      <button class="btn btn-ghost btn-sm" onclick="loadSessionLogs(${activeManualSession.id})">📜 Лог</button>
+    </div>`;
+  logSection.classList.remove('hidden');
+  loadSessionLogs(activeManualSession.id);
+}
+
+function selectSession(session) {
+  if (session.is_closed) return;
+  activeManualSession = session;
+  renderActiveSession();
+  // Оновлюємо виділення рядка
+  document.querySelectorAll('.session-row').forEach(r => r.classList.remove('active-row'));
+  loadManualSessions();
+}
+
+function toggleSessionsList() {
+  sessionsListVisible = !sessionsListVisible;
+  const list = document.getElementById('sessionsList');
+  const btn = document.getElementById('toggleSessionsBtn');
+  list.style.display = sessionsListVisible ? 'flex' : 'none';
+  btn.textContent = sessionsListVisible ? '📂 Сховати події' : '📂 Показати всі події';
+}
+
+function openCreateSessionModal() {
+  document.getElementById('newSessionName').value = '';
+  document.getElementById('createSessionModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('newSessionName').focus(), 100);
+}
+
+async function createSession() {
+  const name = document.getElementById('newSessionName').value.trim();
+  if (!name) { alert('Введіть назву події'); return; }
+  const r = await fetch('/api/manual/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  });
+  if (!r.ok) { const d = await r.json(); alert(d.error || 'Помилка'); return; }
+  const session = await r.json();
+  activeManualSession = session;
+  closeAllModals();
+  await loadManualSessions();
+  renderActiveSession();
+}
+
+async function closeSession(id) {
+  if (!confirm('Закрити цю подію? Нові тригери не можна буде записати під неї.')) return;
+  await fetch(`/api/manual/sessions/${id}/close`, { method: 'POST' });
+  if (activeManualSession && activeManualSession.id === id) {
+    activeManualSession = null;
+  }
+  await loadManualSessions();
+  renderActiveSession();
+}
+
+async function loadSessionLogs(sessionId) {
+  const r = await fetch(`/api/manual/sessions/${sessionId}/logs`);
+  const data = await r.json();
+  // Оновити лічильники активної сесії
+  if (activeManualSession && activeManualSession.id === sessionId) {
+    activeManualSession.total_triggers = data.session.total_triggers;
+    activeManualSession.total_qty = data.session.total_qty;
+  }
+  const logDiv = document.getElementById('manualSessionLog');
+  if (!data.logs.length) {
+    logDiv.innerHTML = '<div style="font-size:13px;color:#9ca3af;padding:8px">Поки що немає спрацювань у цій події</div>';
+    return;
+  }
+  logDiv.innerHTML = data.logs.map(l => {
+    const time = l.triggered_at ? new Date(l.triggered_at).toLocaleString('uk-UA', {
+      day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'
+    }) : '';
+    return `<div class="manual-log-row">
+      <span class="manual-log-ch">Кан. ${l.channel}</span>
+      <span class="manual-log-art">${l.articl}</span>
+      <span class="manual-log-name">${l.product_name}</span>
+      <span class="manual-log-qty">× ${l.quantity}</span>
+      <span class="manual-log-time">${time}</span>
+    </div>`;
+  }).join('');
+}
+
+function openTriggerModal(articl, channel, name) {
+  if (!activeManualSession) {
+    alert('⚠️ Спочатку оберіть або створіть подію збірки!');
+    return;
+  }
+  pendingTriggerArticl = articl;
+  document.getElementById('triggerModalTitle').textContent = `🎛️ Канал ${channel} — ${articl}`;
+  document.getElementById('triggerModalText').textContent = `Товар: ${name}\nБуде записано в подію: «${activeManualSession.name}»`;
+  document.getElementById('triggerQty').value = 1;
+  document.getElementById('manualTriggerModal').classList.remove('hidden');
+}
+
+function adjustTriggerQty(delta) {
+  const inp = document.getElementById('triggerQty');
+  const val = Math.max(1, Math.min(50, parseInt(inp.value || 1) + delta));
+  inp.value = val;
+}
+
+async function confirmTrigger() {
+  if (!pendingTriggerArticl || !activeManualSession) return;
+  const qty = parseInt(document.getElementById('triggerQty').value || 1);
+  const btn = document.querySelector('#manualTriggerModal .btn-success');
+  btn.disabled = true;
+  btn.textContent = '⏳ Запускаємо...';
+
+  const r = await fetch('/api/manual/trigger', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      session_id: activeManualSession.id,
+      articl: pendingTriggerArticl,
+      quantity: qty
+    })
+  });
+  btn.disabled = false;
+  btn.textContent = '🚀 Запустити';
+
+  if (!r.ok) {
+    const d = await r.json();
+    alert(d.error || 'Помилка спрацювання серво');
+    return;
+  }
+  const d = await r.json();
+  closeAllModals();
+  // Оновлюємо кнопку каналу (залишок)
+  const ch = manualChannels.find(c => c.articl === pendingTriggerArticl);
+  if (ch) ch.cell_stock = d.cell_stock;
+  renderManualChannels();
+  // Оновлюємо лог
+  await loadSessionLogs(activeManualSession.id);
+  renderActiveSession();
 }
 
 init();

@@ -151,7 +151,9 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 <body>
 <div class="header">
   <h1>⚙️ Налаштування</h1>
-  <div class="header-links">
+  <div class="header-links" style="display:flex;align-items:center;gap:8px">
+    <button class="btn btn-ghost btn-sm" onclick="openChangePinModal()"
+      style="color:rgba(255,255,255,.85);font-size:12px;padding:4px 10px">🔑 PIN</button>
     <a href="/">📦 Оператор</a>
     <a href="/report">📊 Звіт</a>
   </div>
@@ -339,6 +341,53 @@ body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   </div>
 </div>
 
+<!-- Modal: PIN-захист адмін -->
+<div id="pinModal" class="modal-overlay" style="display:flex;background:rgba(0,0,0,.6);z-index:9999">
+  <div class="modal" style="max-width:360px">
+    <h3>🔒 Доступ до налаштувань</h3>
+    <p style="font-size:13px;color:#6b7280;margin:10px 0 16px">
+      Введіть PIN-код адміністратора для доступу до налаштувань.
+    </p>
+    <div class="fg">
+      <label>PIN-код</label>
+      <input type="password" id="pinInput" placeholder="••••" maxlength="20"
+        style="width:100%;letter-spacing:4px;font-size:20px;text-align:center"
+        onkeydown="if(event.key==='Enter')verifyPin()">
+    </div>
+    <div id="pinError" style="color:#dc2626;font-size:12px;margin-top:6px;display:none">
+      ❌ Невірний PIN-код
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="verifyPin()">🔓 Увійти</button>
+      <a href="/" class="btn btn-outline">← Назад</a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: зміна PIN-коду -->
+<div id="changePinModal" class="modal-overlay hidden">
+  <div class="modal" style="max-width:380px">
+    <h3>🔑 Зміна PIN-коду</h3>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Поточний PIN (або пусто якщо не встановлений)</label>
+      <input type="password" id="cpCurrentPin" placeholder="поточний PIN" style="width:100%">
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Новий PIN (мін. 4 символи, або пусто — вимкнути)</label>
+      <input type="password" id="cpNewPin" placeholder="новий PIN" style="width:100%">
+    </div>
+    <div class="fg" style="margin-bottom:10px">
+      <label>Підтвердити новий PIN</label>
+      <input type="password" id="cpNewPin2" placeholder="повторіть PIN" style="width:100%">
+    </div>
+    <div id="changePinMsg" style="font-size:12px;margin-top:4px"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="savePin()">💾 Зберегти</button>
+      <button class="btn btn-outline" onclick="document.getElementById('changePinModal').classList.add('hidden')">Скасувати</button>
+    </div>
+  </div>
+</div>
+
 <script>
 let products = [];
 let boxes = [];
@@ -346,7 +395,88 @@ let allProducts = [];
 let currentProductId = null;
 let currentCatalogProductId = null;
 
+// ─── PIN-захист ───────────────────────────────────────────────────────────────
+
+async function checkPinRequired() {
+  // Якщо вже автентифіковані в цій сесії — пропускаємо
+  if (sessionStorage.getItem('admin_auth') === '1') {
+    document.getElementById('pinModal').style.display = 'none';
+    return;
+  }
+  const r = await fetch('/api/admin/pin_required');
+  const d = await r.json();
+  if (!d.pin_required) {
+    // PIN не встановлений — відкриваємо без введення
+    sessionStorage.setItem('admin_auth', '1');
+    document.getElementById('pinModal').style.display = 'none';
+  } else {
+    document.getElementById('pinModal').style.display = 'flex';
+    setTimeout(() => document.getElementById('pinInput').focus(), 200);
+  }
+}
+
+async function verifyPin() {
+  const pin = document.getElementById('pinInput').value;
+  const r = await fetch('/api/admin/verify_pin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin })
+  });
+  const d = await r.json();
+  if (d.ok) {
+    sessionStorage.setItem('admin_auth', '1');
+    document.getElementById('pinModal').style.display = 'none';
+    document.getElementById('pinError').style.display = 'none';
+  } else {
+    document.getElementById('pinError').style.display = 'block';
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+
+function openChangePinModal() {
+  document.getElementById('cpCurrentPin').value = '';
+  document.getElementById('cpNewPin').value = '';
+  document.getElementById('cpNewPin2').value = '';
+  document.getElementById('changePinMsg').textContent = '';
+  document.getElementById('changePinModal').classList.remove('hidden');
+}
+
+async function savePin() {
+  const currentPin = document.getElementById('cpCurrentPin').value;
+  const newPin = document.getElementById('cpNewPin').value;
+  const newPin2 = document.getElementById('cpNewPin2').value;
+  const msg = document.getElementById('changePinMsg');
+
+  if (newPin && newPin !== newPin2) {
+    msg.style.color = '#dc2626';
+    msg.textContent = '❌ PIN-коди не співпадають';
+    return;
+  }
+  if (newPin && newPin.length < 4) {
+    msg.style.color = '#dc2626';
+    msg.textContent = '❌ PIN має бути мінімум 4 символи';
+    return;
+  }
+
+  const r = await fetch('/api/admin/change_pin', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ current_pin: currentPin, new_pin: newPin })
+  });
+  const d = await r.json();
+  if (d.error) {
+    msg.style.color = '#dc2626';
+    msg.textContent = `❌ ${d.error}`;
+  } else {
+    msg.style.color = '#16a34a';
+    msg.textContent = newPin ? '✅ PIN успішно змінено' : '✅ PIN вимкнено';
+    setTimeout(() => document.getElementById('changePinModal').classList.add('hidden'), 1500);
+  }
+}
+
 async function init() {
+  await checkPinRequired();
   await loadProducts();
   await loadAllProducts();
   await loadBoxes();

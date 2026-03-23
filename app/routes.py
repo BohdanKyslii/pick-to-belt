@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request, current_app, send_from_directory, send_file
 from werkzeug.utils import secure_filename
 
-from .models import db, Product, Box, Order, OrderItem, StockLog
+from .models import db, Product, Box, Order, OrderItem, StockLog, ManualSession, ManualTriggerLog, Settings
 from . import servo_controller as servo
 
 bp = Blueprint("main", __name__)
@@ -910,6 +910,182 @@ def export_report():
         download_name=filename,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+
+# ─── API: Ручна збірка ────────────────────────────────────────────────────────
+
+@bp.route("/api/manual/channels")
+def manual_channels():
+    """Повертає всі продукти, прив'язані до каналів серво (для кнопок збірки)."""
+    products = Product.query.filter(
+        Product.is_active == True,
+        Product.servo_board == 0x40,
+        Product.servo_channel >= 0,
+        Product.servo_channel <= 15
+    ).order_by(Product.servo_channel).all()
+    return jsonify([{
+        "id": p.id,
+        "articl": p.articl,
+        "name": p.name,
+        "channel": p.servo_channel,
+        "cell_stock": p.cell_stock,
+        "cell_capacity": p.cell_capacity,
+        "photo": p.photo,
+    } for p in products])
+
+
+@bp.route("/api/manual/sessions", methods=["GET"])
+def manual_sessions_list():
+    """Список сесій ручної збірки (остання 50)."""
+    sessions = ManualSession.query.order_by(ManualSession.created_at.desc()).limit(50).all()
+    return jsonify([s.to_dict() for s in sessions])
+
+
+@bp.route("/api/manual/sessions", methods=["POST"])
+def manual_sessions_create():
+    """Створити нову сесію ручної збірки."""
+    data = request.get_json() or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "Назва події обов'язкова"}), 400
+    session = ManualSession(name=name)
+    db.session.add(session)
+    db.session.commit()
+    return jsonify(session.to_dict()), 201
+
+
+@bp.route("/api/manual/sessions/<int:sid>/close", methods=["POST"])
+def manual_sessions_close(sid):
+    """Закрити сесію ручної збірки."""
+    session = ManualSession.query.get_or_404(sid)
+    session.is_closed = True
+    session.closed_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify(session.to_dict())
+
+
+@bp.route("/api/manual/sessions/<int:sid>/logs")
+def manual_session_logs(sid):
+    """Логи спрацювань для конкретної сесії."""
+    session = ManualSession.query.get_or_404(sid)
+    logs = ManualTriggerLog.query.filter_by(session_id=sid).order_by(
+        ManualTriggerLog.triggered_at.desc()
+    ).all()
+    return jsonify({
+        "session": session.to_dict(),
+        "logs": [l.to_dict() for l in logs]
+    })
+
+
+@bp.route("/api/manual/trigger", methods=["POST"])
+def manual_trigger():
+    """Спрацювати серво вручну і записати в лог."""
+    data = request.get_json() or {}
+    session_id = data.get("session_id")
+    articl = (data.get("articl") or "").strip()
+    quantity = int(data.get("quantity") or 1)
+
+    if not session_id:
+        return jsonify({"error": "Потрібно вибрати подію (сесію)"}), 400
+    if not articl:
+        return jsonify({"error": "Артикул обов'язковий"}), 400
+    if quantity < 1:
+        quantity = 1
+
+    session_obj = ManualSession.query.get(session_id)
+    if not session_obj:
+        return jsonify({"error": "Сесію не знайдено"}), 404
+    if session_obj.is_closed:
+        return jsonify({"error": "Сесія вже закрита"}), 400
+
+    product = Product.query.filter_by(articl=articl, is_active=True).first()
+    if not product:
+        return jsonify({"error": f"Товар з артикулом {articl} не знайдено"}), 404
+    if not (product.servo_board == 0x40 and 0 <= product.servo_channel <= 15):
+        return jsonify({"error": "Товар не має прив'язки до серво-каналу"}), 400
+
+    # Спрацювати серво
+    try:
+        servo.release_multiple(product.servo_board, product.servo_channel, quantity)
+    except Exception as e:
+        return jsonify({"error": f"Помилка серво: {str(e)}"}), 500
+
+    # Знімаємо залишок
+    product.cell_stock = max(0, product.cell_stock - quantity)
+
+    # Записуємо в StockLog
+    db.session.add(StockLog(
+        articl=articl,
+        order_id=f"manual:{session_obj.name}",
+        quantity=quantity,
+        log_type="pick"
+    ))
+
+    # Записуємо в ManualTriggerLog
+    log_entry = ManualTriggerLog(
+        session_id=session_id,
+        articl=articl,
+        product_name=product.name,
+        channel=product.servo_channel,
+        quantity=quantity,
+    )
+    db.session.add(log_entry)
+    db.session.commit()
+
+    return jsonify({
+        "ok": True,
+        "log": log_entry.to_dict(),
+        "cell_stock": product.cell_stock,
+        "simulation": servo.is_simulation(),
+    })
+
+
+# ─── API: Налаштування / PIN адміністратора ────────────────────────────────────
+
+def _get_admin_pin():
+    """Повертає поточний PIN. Якщо не встановлено — порожній рядок (PIN вимкнений)."""
+    s = Settings.query.filter_by(key="admin_pin").first()
+    return s.value if s else ""
+
+
+@bp.route("/api/admin/verify_pin", methods=["POST"])
+def admin_verify_pin():
+    data = request.get_json() or {}
+    pin = (data.get("pin") or "").strip()
+    current = _get_admin_pin()
+    if not current:
+        # PIN не встановлено — доступ вільний
+        return jsonify({"ok": True, "pin_required": False})
+    return jsonify({"ok": pin == current, "pin_required": True})
+
+
+@bp.route("/api/admin/pin_required")
+def admin_pin_required():
+    """Перевіряє чи потрібен PIN взагалі."""
+    current = _get_admin_pin()
+    return jsonify({"pin_required": bool(current)})
+
+
+@bp.route("/api/admin/change_pin", methods=["POST"])
+def admin_change_pin():
+    data = request.get_json() or {}
+    current_pin = (data.get("current_pin") or "").strip()
+    new_pin = (data.get("new_pin") or "").strip()
+
+    current = _get_admin_pin()
+    if current and current_pin != current:
+        return jsonify({"error": "Невірний поточний PIN"}), 403
+
+    if new_pin and len(new_pin) < 4:
+        return jsonify({"error": "PIN має бути мінімум 4 символи"}), 400
+
+    s = Settings.query.filter_by(key="admin_pin").first()
+    if s:
+        s.value = new_pin
+    else:
+        db.session.add(Settings(key="admin_pin", value=new_pin))
+    db.session.commit()
+    return jsonify({"ok": True, "pin_enabled": bool(new_pin)})
 
 
 # ─── Статика ──────────────────────────────────────────────────────────────────

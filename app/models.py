@@ -164,3 +164,61 @@ class StockLog(db.Model):
     quantity = db.Column(db.Integer, nullable=False)
     log_type = db.Column(db.String(20), default="pick")  # 'pick' | 'restock'
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+class ManualSession(db.Model):
+    """Сесія ручної збірки — іменована подія для аналітики."""
+    __tablename__ = "manual_sessions"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    is_closed = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    closed_at = db.Column(db.DateTime, nullable=True)
+
+    logs = db.relationship("ManualTriggerLog", backref="session", cascade="all, delete-orphan")
+
+    def to_dict(self):
+        total_qty = sum(l.quantity for l in self.logs)
+        return {
+            "id": self.id,
+            "name": self.name,
+            "is_closed": self.is_closed,
+            "total_triggers": len(self.logs),
+            "total_qty": total_qty,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "closed_at": self.closed_at.isoformat() if self.closed_at else None,
+        }
+
+
+class ManualTriggerLog(db.Model):
+    """Лог кожного спрацювання серво в режимі ручної збірки."""
+    __tablename__ = "manual_trigger_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("manual_sessions.id"), nullable=False)
+    articl = db.Column(db.String(50), nullable=False)
+    product_name = db.Column(db.String(200), default="")
+    channel = db.Column(db.Integer, nullable=False)
+    quantity = db.Column(db.Integer, default=1)
+    triggered_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "session_id": self.session_id,
+            "articl": self.articl,
+            "product_name": self.product_name,
+            "channel": self.channel,
+            "quantity": self.quantity,
+            "triggered_at": self.triggered_at.isoformat() if self.triggered_at else None,
+        }
+
+
+class Settings(db.Model):
+    """Налаштування системи (key-value)."""
+    __tablename__ = "settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    key = db.Column(db.String(100), unique=True, nullable=False)
+    value = db.Column(db.Text, default="")
